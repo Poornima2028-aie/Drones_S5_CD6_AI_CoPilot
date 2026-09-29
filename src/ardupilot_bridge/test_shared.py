@@ -24,9 +24,11 @@ def alpha_from(u_a, u_h):
     if na < 1e-6 or nh < 1e-6:
         return 1.0
     eta = np.arccos(np.clip(u_a @ u_h / (na*nh), -1, 1))
-    if eta >= BETA1: return 0.0
-    if eta <= BETA2: return 1.0
-    return (eta - BETA1) / (BETA2 - BETA1)
+    if eta >= BETA1: a = 0.0
+    elif eta <= BETA2: a = 1.0
+    else: a = (eta - BETA1) / (BETA2 - BETA1)
+    s = min(na / 0.5, 1.0)
+    return s * a + (1 - s) * 1.0
 
 def send_velocity(vx, vy, vz):
     m.mav.set_position_target_local_ned_send(
