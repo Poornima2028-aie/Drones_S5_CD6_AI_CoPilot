@@ -79,7 +79,7 @@ controller.
 
 ---
 
-# Two-Drone Collision Avoidance Simulation
+# Drone Collision Avoidance Simulation
 
 A Python-based 3D drone simulation featuring two independently controlled drones, static and moving obstacles, predicted collision avoidance, PID-based flight control, and real-time camera visualization.
 
@@ -97,7 +97,8 @@ A Python-based 3D drone simulation featuring two independently controlled drones
 10. [Manual Controls](#10-manual-controls)
 11. [Control Modes and Safety Logic](#11-control-modes-and-safety-logic)
 12. [PID Control and Drone Physics](#12-pid-control-and-drone-physics)
-13. [Conclusion](#23-conclusion)
+13. [Development Versions and Implemented Improvements](#Development-Version-and-Implemente-Improvements)
+14. [Conclusion](#23-conclusion)
 
 ---
 
@@ -970,9 +971,75 @@ Updated Position, Velocity, and Orientation
 
 The avoidance logic is the high-level decision layer, while the PID controller is the low-level flight-control layer.
 
+## 13.Development Versions and Implemented Improvements
+
+This project was developed through multiple versions, with each version introducing improvements in drone control, obstacle avoidance, perception, and flight evaluation.
+
+### 1. `single_drone.py` — Manual Drone Control with Automatic Obstacle Avoidance
+
+**Main Implementation:**
+
+- Implements manual keyboard control for a single drone.
+- Includes static obstacles, consisting of a pillar and a box.
+- Adds three dynamic obstacles that patrol, orbit, and move vertically.
+- Predicts potential collisions using the **Closest Point of Approach (CPA)** calculation.
+- Implements automatic obstacle avoidance when a potential collision threat is detected.
+- Uses velocity slew limiting and a target-position leash to reduce sudden movements and improve control stability.
+- Supports `MANUAL` and `AUTO` modes, emergency override, and automatic switching back to manual control.
+
+**Improvement Over the Previous Two-Drone Simulation:**
+
+This version focuses on testing and improving obstacle-avoidance logic using a single manually controlled drone. It provides a simpler environment for evaluating collision prediction, smooth movement, and transitions between manual and automatic control.
+
+### 2. `multi_drone_automated.py` — Autonomous Two-Drone Waypoint Navigation
+
+**Main Implementation:**
+
+- Extends the simulation to two drones that independently follow predefined waypoint missions.
+- Assigns different starting positions, flight altitudes, and waypoint routes to each drone.
+- Includes static obstacles, three moving obstacles, and drone-to-drone collision avoidance.
+- Predicts potential collisions and generates avoidance directions while maintaining progress toward the assigned waypoints.
+- Uses smooth velocity control, acceleration limits, target-position constraints, and PID-based motor control.
+- Displays multiple camera views and coloured trails to visualize the flight paths of both drones.
+
+**Improvement Over the Previous Two-Drone Simulation:**
+
+This version introduces autonomous waypoint navigation. Instead of relying entirely on pilot input, both drones follow predefined routes while adjusting their movement to avoid environmental obstacles and each other.
+
+### 3. `34.py` — LiDAR-Based Obstacle Detection with CBF Safety Filtering and Flight Reports
+
+**Main Implementation:**
+
+- Implements a simulated **3D LiDAR sensor with 182 rays for each drone**.
+- Detects obstacles using LiDAR ray-hit points instead of directly using the simulator's obstacle positions as the input for obstacle avoidance.
+- Groups detected points into obstacle clusters and tracks them over time to estimate obstacle velocities.
+- Introduces a **Control Barrier Function (CBF) safety filter** that modifies requested velocity commands when necessary to maintain obstacle clearance.
+- Supports five operating modes: `MANUAL`, `ASSIST`, `AUTO`, `EMERGENCY`, and `NO ASSIST`.
+- Visualizes LiDAR rays and provides a dashboard displaying information such as obstacle clearance and threat direction.
+- Records flight data and generates CSV logs and a PNG report containing measurements such as clearance, speed, operating modes, and collision-related events.
+- Uses simulator ground-truth information for evaluation and reporting, rather than as the drone's obstacle-perception input.
+
+**Improvement Over Version `multi_drone_manual+automated.py`:**
+
+This version advances the obstacle-avoidance system from directly using known obstacle states to a sensor-based perception approach. It introduces LiDAR-based obstacle detection, obstacle tracking, a CBF safety filter, configurable assistance modes, and quantitative flight evaluation.
+
+### Overall Development Progression
+
+| Version | Main Contribution | Control Approach |
+|---|---|---|
+| `single_drone.py` | Single-drone manual flight with automatic obstacle avoidance | Manual control with automatic intervention |
+| `multi_drone_automated.py` | Two drones following independent waypoint missions | Autonomous navigation with geometric avoidance |
+| `multi_drone_automated.py` | Two-drone manual-control and obstacle-avoidance baseline | Manual control with automatic avoidance |
+| `34.py` | LiDAR perception, CBF safety filtering, and flight reporting | Sensor-based safety assistance and automatic avoidance |
+
+### Current Implementation and Limitations
+
+The current implementation in `34.py` uses simulated LiDAR for obstacle perception and a **Control Barrier Function (CBF)** for safety filtering. It does not use a trained machine-learning model.
+
+The CBF safety filter is designed to reduce risky velocity commands and maintain obstacle clearance. However, it does not guarantee collision-free flight under every possible condition. Performance depends on factors such as obstacle detection, tracking accuracy, control response, and the simulation environment.
 
 
-## 13. Conclusion
+## 14. Conclusion
 
 The Two-Drone Collision Avoidance Simulation combines manual keyboard control, relative-motion analysis, closest-point-of-approach prediction, geometric obstacle avoidance, velocity smoothing, PID-based motor control, and 3D physics simulation.
 
