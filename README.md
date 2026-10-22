@@ -734,6 +734,7 @@ Where:
 The `atan2` expression wraps the angle into the range $[-\pi,\pi]$, keeping the yaw value within a standard angular interval.
 
 This allows the drone to turn smoothly in the desired direction without its target yaw angle increasing or decreasing indefinitely.
+
 ### 8.17 Simulation Time Steps
 
 The physics simulation frequency is:
