@@ -420,17 +420,6 @@ If the relative velocity is nearly zero, the program uses $t_{\mathrm{CPA}} = 0$
 
 **Interpretation:** The result estimates when the drone and obstacle will be closest within the configured prediction horizon. It is a constant-velocity approximation, not a complete simulation of their future trajectories.
 
-Where:
-
-- `r` is the current relative position.
-- `v_r` is the relative velocity.
-- `T` is the prediction horizon, configured as `2.0 seconds`.
-- The dot product measures the relationship between the vectors.
-- `clip` restricts the result to the interval from zero to `T`.
-
-If the relative velocity is almost zero, the program uses a CPA time of zero to avoid unstable division.
-
-**Interpretation:** The algorithm estimates the future closest approach using a short, constant-relative-velocity approximation. It does not simulate the complete future trajectory.
 
 ### 8.6 Predicted Relative Position
 
@@ -459,32 +448,25 @@ This allows the avoidance logic to consider both the current separation and the 
 
 ### 8.7 Avoidance Strength
 
-The avoidance strength is calculated as:
+The avoidance strength is calculated using the following formula:
 
 $$
-s =
-\operatorname{clip}\left(
-\frac{D_{\mathrm{avoid}} - g_{\mathrm{effective}}}
-{D_{\mathrm{avoid}}},
-0,1
-\right)
+s = \min\left(1,\max\left(0,\frac{D_{\mathrm{avoid}}-g_{\mathrm{effective}}}{D_{\mathrm{avoid}}}\right)\right)
 $$
 
 Where:
 
-- `D_avoid = 1.5 m`.
-- `s` is the avoidance strength between zero and one.
-- `g_effective` is the effective surface gap.
+- $s$ is the avoidance strength, ranging from 0 to 1.
+- $D_{\mathrm{avoid}}$ is the avoidance distance, configured as `1.5 m`.
+- $g_{\mathrm{effective}}$ is the effective surface gap between the drone and the obstacle.
 
-Interpretation:
+**Interpretation:**
 
-- If the effective gap is at or above the avoidance distance, the strength is zero.
-- As the effective gap decreases, the strength increases.
-- At zero effective gap or below, the strength reaches one.
+- If the effective gap is greater than or equal to the avoidance distance, the avoidance strength is 0.
+- As the effective gap decreases, the avoidance strength increases gradually.
+- When the effective gap reaches zero or becomes negative, the avoidance strength reaches 1.
 
-The code also ignores an obstacle when its current gap exceeds `PREDICT_RANGE = 2.5 m` for avoidance-vector generation. The nearest current gap is still tracked for emergency checks.
-
-This is a mathematical rule, not a machine-learning prediction.
+This formula provides a gradual response instead of simply switching obstacle avoidance on or off. It is a mathematical rule, not a machine-learning prediction.
 
 ### 8.8 Direction Away From the Predicted Approach
 
