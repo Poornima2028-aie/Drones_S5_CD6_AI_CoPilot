@@ -711,22 +711,29 @@ This limits target-position jumps but does not guarantee collision-free motion.
 
 ### 8.16 Yaw Update
 
-The target yaw update is:
+The target yaw angle is updated when the drone's turn key is pressed.
+
+The formula is:
 
 $$
 \psi_{\mathrm{target,new}} =
-\operatorname{wrap}\left(
-\psi_{\mathrm{target,old}} +
-u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t
+\operatorname{atan2}\left(
+\sin(\psi_{\mathrm{target,old}} + u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t),
+\cos(\psi_{\mathrm{target,old}} + u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t)
 \right)
 $$
 
 Where:
 
-- `u_yaw` represents the turn command.
-- `omega_yaw = 0.8 rad/s` is the configured yaw rate.
-- `wrap` keeps the angle within the interval from negative pi to pi.
+- $\psi_{\mathrm{target,new}}$ is the updated target yaw angle.
+- $\psi_{\mathrm{target,old}}$ is the previous target yaw angle.
+- $u_{\mathrm{yaw}}$ represents the turning input.
+- $\omega_{\mathrm{yaw}}$ is the configured yaw rate, `0.8 rad/s`.
+- $\Delta t$ is the control time step.
 
+The `atan2` expression wraps the angle into the range $[-\pi,\pi]$, keeping the yaw value within a standard angular interval.
+
+This allows the drone to turn smoothly in the desired direction without its target yaw angle increasing or decreasing indefinitely.
 ### 8.17 Simulation Time Steps
 
 The physics simulation frequency is:
