@@ -168,10 +168,6 @@ This project addresses the problem by continuously checking the distance and rel
 | time | Tracks elapsed time and supports real-time synchronization. |
 | DSLPIDControl | Converts target states into four motor RPM commands using PID-based control. |
 
-### Is this an AI or machine-learning project?
-
-The current implementation uses **geometric, rule-based obstacle avoidance**. It does not train a neural network or use a learned policy. Collision-risk estimation is based on relative position, relative velocity, distance thresholds, and mathematical equations.
-
 ## 6. System Architecture
 
 The program repeatedly executes the following control loop:
