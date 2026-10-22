@@ -393,16 +393,32 @@ A negative gap indicates overlap according to this simplified radius-based model
 
 ### 8.5 Time of Closest Approach (CPA)
 
-The program estimates the time at which the relative distance will be smallest, assuming constant relative velocity.
+The program estimates the time at which the relative distance between the drone and an obstacle will be smallest, assuming constant relative velocity.
+
+The time of closest approach is calculated using:
 
 $$
 t_{\mathrm{CPA}} =
-\operatorname{clip}\left(
+\min\left(
+T,
+\max\left(
+0,
 -\frac{\mathbf{r}\cdot\mathbf{v}_r}
-{\mathbf{v}_r\cdot\mathbf{v}_r},
-0,T
+{\mathbf{v}_r\cdot\mathbf{v}_r}
+\right)
 \right)
 $$
+
+Where:
+
+- $\mathbf{r}$ is the relative position vector.
+- $\mathbf{v}_r$ is the relative velocity vector.
+- $T$ is the prediction horizon, configured as `PREDICT_HORIZON = 2.0 s`.
+- The dot product is used to calculate how the relative position changes along the relative velocity direction.
+
+If the relative velocity is nearly zero, the program uses $t_{\mathrm{CPA}} = 0$ to avoid division by a value close to zero.
+
+**Interpretation:** The result estimates when the drone and obstacle will be closest within the configured prediction horizon. It is a constant-velocity approximation, not a complete simulation of their future trajectories.
 
 Where:
 
