@@ -79,860 +79,1313 @@ controller.
 
 ---
 
-## 🚨 Problem Statement
+# Two-Drone Collision Avoidance Simulation
 
-Manual UAV operation provides human flexibility, but it depends heavily on
-the operator's reaction time. When the pilot commands the UAV toward an
-obstacle, continuing the same command may result in a collision.
+A Python-based 3D drone simulation that demonstrates manual flight control, automatic obstacle avoidance, relative-motion prediction, PID-based control, and multi-camera visualization using PyBullet.
 
-On the other hand, a completely autonomous controller removes the human
-operator from normal decision-making.
+## Table of Contents
 
-Therefore, there is a need for a **shared-control mechanism** that:
-
-- Continuously monitors the UAV's surrounding environment.
-- Detects obstacles that pose a critical risk.
-- Determines when human control may result in a collision.
-- Temporarily overrides unsafe forward motion.
-- Performs local obstacle avoidance.
-- Maintains stable UAV movement during autonomous intervention.
-- Automatically returns control to the human operator after the obstacle
-  has been cleared.
-
-The main challenge is to perform this autonomous intervention **without
-causing abrupt or unsafe UAV movements**.
-
----
-
-## 🎯 Objectives
-
-The main objectives of this project are:
-
-1. **Develop a UAV environment for human-controlled flight.**
-
-2. **Continuously monitor the UAV's surrounding environment.**
-
-3. **Identify obstacles that threaten the UAV's intended flight path.**
-
-4. **Determine when human control may result in a collision.**
-
-5. **Automatically activate autonomous safety assistance during critical
-   situations.**
-
-6. **Select a safe direction for obstacle avoidance.**
-
-7. **Execute a local collision-free avoidance maneuver.**
-
-8. **Maintain stable UAV motion during autonomous intervention.**
-
-9. **Return control to the human operator after the obstacle is cleared.**
-
-10. **Evaluate the effectiveness and safety of the proposed shared-control
-    mechanism.**
+1. [Project Overview](#1-project-overview)
+2. [Problem Statement](#2-problem-statement)
+3. [Objectives](#3-objectives)
+4. [Main Features](#4-main-features)
+5. [Technologies Used](#5-technologies-used)
+6. [System Architecture](#6-system-architecture)
+7. [How the Project Works](#7-how-the-project-works)
+8. [Mathematical Formulas](#8-mathematical-formulas)
+9. [Obstacle Types and Motion Equations](#9-obstacle-types-and-motion-equations)
+10. [Keyboard Controls](#10-keyboard-controls)
+11. [Control Modes and Safety Logic](#11-control-modes-and-safety-logic)
+12. [PID Control and Drone Physics](#12-pid-control-and-drone-physics)
+13. [Camera Display and Flight Trails](#13-camera-display-and-flight-trails)
+14. [Configuration Parameters](#14-configuration-parameters)
+15. [Installation](#15-installation)
+16. [How to Run](#16-how-to-run)
+17. [Testing the Project](#17-testing-the-project)
+18. [Project Structure](#18-project-structure)
+19. [Limitations](#19-limitations)
+20. [Future Improvements](#20-future-improvements)
+21. [Troubleshooting](#21-troubleshooting)
+22. [Viva Questions and Answers](#22-viva-questions-and-answers)
+23. [Conclusion](#23-conclusion)
 
 ---
 
-## 🛠️ Key Idea
+## 1. Project Overview
 
-The proposed system follows a simple shared-control principle:
+The **Two-Drone Collision Avoidance Simulation** is a Python project that simulates two quadrotor drones flying simultaneously in a three-dimensional environment.
 
-**Human Control → Obstacle Detection → Risk Assessment → Autonomous Takeover
-→ Safe Avoidance → UAV Stabilization → Human Control**
+Both drones can be controlled independently using keyboard inputs. While moving, they must avoid static obstacles, moving obstacles, and each other.
 
-The UAV is therefore not fully autonomous throughout the flight. Instead,
-autonomy is activated only when it is required for safety.
+The project implements a hybrid control system with two primary operating modes:
 
----
+- **MANUAL Mode:** The drone follows the user's keyboard commands.
+- **AUTO Mode:** The drone temporarily generates avoidance movements when a potential collision is detected.
 
-## 🔄 System Overview
+An emergency avoidance mechanism can override manual commands when an obstacle becomes dangerously close.
 
-1. The UAV starts in **MANUAL mode**.
-2. The human operator provides flight commands.
-3. The environment is continuously monitored for obstacles.
-4. The system checks whether an obstacle lies within the UAV's forward
-   flight corridor.
-5. If there is no critical obstacle, human control continues.
-6. If a critical obstacle is detected, autonomous safety control is
-   activated.
-7. Forward motion is reduced or stopped.
-8. The available clearance around the obstacle is evaluated.
-9. A safer direction is selected.
-10. A local collision-free avoidance path is generated.
-11. The UAV follows the selected path using the PID controller.
-12. After clearing the obstacle, the UAV is stabilized.
-13. Autonomous intervention is terminated.
-14. Control is returned to the human operator.
+Each drone makes its own control decisions. For example, Drone 1 can enter automatic avoidance while Drone 2 remains under manual control.
 
----
+### Why this project?
 
-##  Project Overview
+In real-world drone navigation, following movement commands without considering nearby objects can cause collisions. This project demonstrates how position, velocity, distance calculations, motion prediction, and feedback control can be combined to reduce collision risk.
 
-This project implements a data-driven optimal shared control system for UAVs. The system:
+**Note:** This is a simulation and educational demonstration, not a certified real-world drone safety system.
 
-1. Predicts nonlinear UAV dynamics using **Koopman operators** from human maneuver data.
-2. Approximates the optimal controller online using **Actor-Critic reinforcement learning**.
-3. Smoothly blends human and autonomous control using an adaptive **shared control mechanism**.
-4. Validates across **four simulation platforms**: Gym-PyBullet, MuJoCo, Gazebo, and ArduPilot SITL.
+## 2. Problem Statement
 
-### Core Contributions (from Base Paper)
+Manually controlling drones can be difficult when multiple obstacles are present, especially when obstacles are moving or multiple drones share the same environment.
 
-1. A data-driven optimal shared control method using Koopman operators and RL, learning online without a precise UAV dynamics model.
-2. A smooth shared control mechanism that judges cooperative intention and integrates both human and autonomous control inputs via an adaptive parameter.
-3. Online optimal controller approximation exploiting human operator experience, validated through Human-in-the-Loop simulations.
+A drone may collide with an obstacle if the pilot reacts too late or fails to account for relative motion.
 
----
+The objective is to develop a simulation that continuously monitors drone and obstacle positions, predicts potential close approaches, calculates avoidance directions, and adjusts the desired velocity when necessary.
 
-## 2. Complete Mathematical Formulation
+The system should also preserve manual control whenever automatic intervention is not required.
 
-### 2.1 UAV Attitude Dynamics Model
+## 3. Objectives
 
-**Equation 1 — Euler-Lagrange Attitude Dynamics:**
+- Simulate two CF2X quadrotor drones in a 3D physics environment.
+- Provide independent keyboard controls for both drones.
+- Implement static and moving obstacles.
+- Treat the other drone as a potential collision obstacle.
+- Predict the closest approach using relative position and velocity.
+- Calculate graduated avoidance strength based on estimated clearance.
+- Support MANUAL and AUTO operating modes.
+- Implement emergency avoidance behavior.
+- Smooth commanded velocity changes using acceleration limits.
+- Convert desired drone states into motor RPM commands through PID-based control.
+- Display multiple camera views and colored flight trails.
+- Constrain target positions to configured arena boundaries.
 
-$$
-M\ddot{\Phi} = -C(\Phi, \dot{\Phi})\dot{\Phi} + \tau + W(\Phi, \dot{\Phi})
-$$
+## 4. Main Features
 
-Where:
-- $M = \text{diag}([J_\phi, J_\theta, J_\psi]) \in \mathbb{R}^{3\times3}$ is the inertial matrix
-- $\Phi = [\phi, \theta, \psi]^T \in \mathbb{R}^{3\times1}$ is the roll, pitch, yaw angle vector
-- $C(\Phi, \dot{\Phi}): \mathbb{R}^{6\times1} \to \mathbb{R}^{3\times3}$ is the coupled Coriolis term
-- $\tau = [\gamma_\phi, \gamma_\theta, \gamma_\psi]^T \in \mathbb{R}^{3\times1}$ is the input torque
-- $W(\Phi, \dot{\Phi})$ is the uncertain disturbance
+| Feature | Description |
+|---|---|
+| Two-drone simulation | Simulates two drones simultaneously. |
+| Independent keyboard control | Uses separate keys for each drone. |
+| Static obstacles | Includes a pillar and a box. |
+| Moving obstacles | Includes three spheres following different motion patterns. |
+| Drone-to-drone avoidance | Treats the other drone as a moving obstacle. |
+| Closest-approach prediction | Estimates future relative separation over a short time horizon. |
+| Graduated avoidance | Increases avoidance strength as the estimated gap decreases. |
+| Passing-side memory | Retains a selected passing side to reduce left-right switching. |
+| Emergency override | Applies stronger avoidance commands near obstacles. |
+| Velocity smoothing | Limits the rate of change of commanded velocity. |
+| Position constraints | Keeps target positions inside configured boundaries. |
+| Target-position leash | Limits the distance between the target and current drone position. |
+| Multi-camera visualization | Displays multiple simulation viewpoints. |
+| Flight trails | Shows the recent movement paths of both drones. |
 
-The input torques are generated by:
-- $\gamma_\phi = \alpha_l \alpha_w u_\phi$, where $u_\phi = \omega_1^2 - \omega_3^2$
-- $\gamma_\theta = \alpha_l \alpha_w u_\theta$, where $u_\theta = \omega_2^2 - \omega_1^2 + \omega_3^2 - \omega_2^2 - \omega_4^2$
-- $\gamma_\psi = \alpha_\gamma u_\psi$
+## 5. Technologies Used
 
-Where $\alpha_l$ is the distance from center of mass to each rotor, $\alpha_w$ is the thrust factor, $\alpha_\gamma$ is the drag factor, and $\omega_j$ ($j=1,...,4$) is the speed of the $j$-th rotor.
+| Technology | Purpose |
+|---|---|
+| Python | Main programming language and simulation logic. |
+| `gym-pybullet-drones` | Provides drone models, simulation environments, and control interfaces. |
+| PyBullet | Simulates 3D physics, collisions, objects, and camera rendering. |
+| NumPy | Performs vector calculations, normalization, distance calculations, and numerical clipping. |
+| OpenCV (`cv2`) | Displays and combines camera images. |
+| `pynput` | Captures keyboard events. |
+| `threading` | Allows keyboard listening to run separately from the simulation loop. |
+| `time` | Supports timing and real-time synchronization. |
+| `DSLPIDControl` | Converts desired drone states into motor RPM commands using a PID-based controller. |
 
-**Equation 2 — Reformulated Dynamics:**
+### Is this an AI or machine-learning project?
 
-Define $B_\gamma = M^{-1} \times \text{diag}([\alpha_l \alpha_w, \alpha_l \alpha_w, \alpha_\gamma]) \in \mathbb{R}^{3\times3}$:
+The current implementation uses **geometric, mathematical, and rule-based obstacle avoidance**. It does not train a neural network or use a learned machine-learning policy.
 
-$$
-\ddot{\Phi} = -M^{-1}(C(\Phi, \dot{\Phi})\dot{\Phi}) + B_\gamma U + \Omega(\Phi, \dot{\Phi})
-$$
+Collision risk is estimated using relative-motion equations, and avoidance decisions are made using programmed rules and thresholds.
 
-Where $\Omega(\Phi, \dot{\Phi}) = M^{-1} \times W(\Phi, \dot{\Phi})$ is the transformed uncertain disturbance.
+## 6. System Architecture
 
-**Equation 3 — Nonlinear Affine-Input Form:**
-
-Define state $x = [\Phi^T, \dot{\Phi}^T]^T \in \mathbb{R}^{6\times1}$:
-
-$$
-\dot{x} = f(x) + g(x)u + d(x)
-$$
-
-Where the drift dynamics matrix $f(x)$, control input matrix $g(x)$, and uncertain disturbance matrix $d(x)$ are defined as:
-
-$$
-f = \begin{bmatrix} 0_{3\times3} & I_{3\times3} \\ 0_{3\times3} & -M^{-1}C \end{bmatrix}x, \quad
-g = \begin{bmatrix} 0_{3\times3} \\ B_\gamma \end{bmatrix}, \quad
-d = \begin{bmatrix} 0_{3\times1} \\ \Omega \end{bmatrix}
-$$
-
-**Equation 4 — Tracking Error Dynamics:**
-
-With desired trajectory $x_d = [\Phi_d^T, \dot{\Phi}_d^T]^T$ and tracking error $e = x - x_d$:
-
-$$
-\dot{e} = \dot{x} - \dot{x}_d = [f(x) - f_d(x_d)] + g(x)u + d(x)
-$$
-
-**Equation 5 — Augmented Dynamics:**
-
-With augmented state $X = [e^T, x_d^T]^T \in \mathbb{R}^{12\times1}$ and augmented control $U = [u^T, 0_{1\times3}]^T \in \mathbb{R}^{6\times1}$:
-
-$$
-\dot{X} = F(X) + G(X)U + D(X)
-$$
-
-Where the augmented dynamics matrices are defined as:
-
-$$
-F(X) = \begin{bmatrix} f(e + x_d) - f_d(x_d) \\ f_d(x_d) \end{bmatrix}
-$$
-
-$$
-G(X) = \begin{bmatrix} g(e + x_d) & 0_{6\times3} \\ 0_{6\times3} & 0_{6\times3} \end{bmatrix}
-$$
-
-$$
-D(X) = \begin{bmatrix} d(e + x_d) \\ 0_{6\times1} \end{bmatrix}
-$$
-
-The augmented system combines the tracking error dynamics (top half) with the desired trajectory dynamics (bottom half). The desired trajectory evolves autonomously without control input, which is why the bottom row of $G(X)$ is zero.
-
-**Assumption 1:**
-1. The drift dynamics $f(x)$ and control input matrix $g(x)$ are Lipschitz continuous with respect to $x$.
-2. The uncertain disturbance $D(X)$ is bounded by a known function $L_D(X)$, i.e., $\|D(X)\| \leq L_D(X)$ with $L_D(0) = 0$.
-
----
-
-### 2.2 Koopman Operator Framework
-
-**Equation 6 — Uncontrolled Nonlinear Dynamics:**
-
-$$
-x_{t+1} = \mathcal{F}(x_t)
-$$
-
-Where $\mathcal{F}: \mathbb{R}^n \to \mathbb{R}^n$ is the nonlinear drift dynamics.
-
-**Equation 7 — Koopman Operator Definition (Uncontrolled):**
-
-$$
-(\mathcal{K}\Psi)(x_{t+1}) = \Psi(\mathcal{F}(x_t))
-$$
-
-Where $\Psi: \mathbb{R}^n \to \mathcal{H}$ is the transfer function mapping state-space to Hilbert space.
-
-**Equation 8 — Extended System Dynamics (Controlled):**
-
-With extended state $\chi_t = [x_t^T, u_t^T]^T$:
-
-$$
-\chi_{t+1} = \mathcal{F}(\chi_t) := \begin{bmatrix} \mathcal{F}(x, u(0)) \\ \mathcal{L}u \end{bmatrix}
-$$
-
-Where $\mathcal{L}$ is the left shift operator satisfying $(\mathcal{L}u)_i = u_{i+1}$.
-
-**Equation 9 — Koopman Operator (Controlled):**
-
-$$
-(\mathcal{K}\Theta)(\chi) = \Theta(\mathcal{F}(\chi))
-$$
-
-Where $\Theta: \mathbb{R}^{n+l} \to \mathbb{R}$ is the transfer function for the extended system.
-
----
-
-### 2.3 Extended Dynamic Mode Decomposition (EDMD)
-
-**Equation 10 — EDMD Approximation:**
-
-$$
-\Theta(\chi_{t+1}) = \mathcal{K}^T \Theta(\chi_t) + \varepsilon(\chi_t)
-$$
-
-Where $\varepsilon(\chi_t)$ is the approximation error of the Koopman operator.
-
-**Equation 11 — EDMD Objective Function:**
-
-Given collected data $(\chi_j, \chi_{j+1})$, $j = 1, ..., N_\mathcal{K}$:
-
-$$
-E_\mathcal{K} = \sum_{j=1}^{N_\mathcal{K}} \|\varepsilon(\chi_j)\|^2 = \sum_{j=1}^{N_\mathcal{K}} \|\Theta(\chi_{j+1}) - K^T \Theta(\chi_j)\|^2
-$$
-
-**Equation 12 — Linearized Dynamics Matrices:**
-
-With transformed state data $X_\mathcal{K} = [\Theta(\chi_1), ..., \Theta(\chi_{N_\mathcal{K}-1})]$, output data $Y_\mathcal{K} = [\Theta(\chi_2), ..., \Theta(\chi_{N_\mathcal{K}})]$, and control data $U_\mathcal{K} = [\Theta(u_1), ..., \Theta(u_{N_\mathcal{K}})]$:
-
-$$
-[A, B] = Y_\mathcal{K} [X_\mathcal{K}, U_\mathcal{K}]^{\dagger}
-$$
-
-Where $\dagger$ denotes the Moore-Penrose pseudo-inverse.
-
-**Equation 13 — Estimated Augmented Dynamics Matrices:**
-
-$$
-\hat{F} = \begin{bmatrix} A \times (e + x_d) - f_d(x_d) \\ f_d(x_d) \end{bmatrix}, \quad
-\hat{G} = \begin{bmatrix} B & 0_{6\times3} \\ 0_{6\times3} & 0_{6\times3} \end{bmatrix}
-$$
-
----
-
-### 2.4 Optimal Control Formulation
-
-**Equation 14 — Quadratic Cost Function:**
-
-$$
-J(X, U) = \int_{t_0}^{\infty} r(X(\tau), U(\tau)) \, d\tau
-$$
-
-Where the saturated control input satisfies $-\mu \leq U(t) \leq \mu$.
-
-**Equation 15 — Instantaneous Reward Function:**
-
-$$
-r(X, U) = X^T Q X + \Xi(U)
-$$
-
-Where $Q \in \mathbb{R}^{n\times n}$ is the positive definite state penalty matrix.
-
-**Equation 16 — Control Input Penalty:**
-
-$$
-\Xi(U) = 2R \int_0^U \left(\mu \tanh^{-1}\left(\frac{\zeta_U}{\mu}\right)\right) d\zeta_U
-$$
-
-Where $R \in \mathbb{R}^{n\times n}$ is the positive definite control input penalty matrix.
-
-**Equation 17 — Optimal Value Function:**
-
-$$
-J^*(X) = \min_{U(\tau) \in \Omega_U} \int_t^{\infty} r(X(\tau), U(\tau)) \, d\tau
-$$
-
-Where $\Omega_U \in \mathbb{R}^{m\times1}$ is the admissible set of control input.
-
-**Equation 18 — Hamilton Function:**
-
-$$
-H(X, U, \nabla J^{\ast}) = X^T Q X + \Xi(U) + (\nabla J^{\ast})^T (F + GU + D)
-$$
-
-Where $\nabla J^{\ast} = \frac{\partial J^{\ast}}{\partial X}$ is the gradient of the optimal value function.
-
-**Equation 19 — Optimal Control Input:**
-
-$$
-U^{\ast}(X) = -\mu \tanh\left(\frac{R^{-1} G^T (\nabla J^{\ast}(X))^T}{2\mu}\right)
-$$
-
-**Equation 20 — Hamilton-Jacobi-Bellman (HJB) Equation:**
-
-$$
-0 = X^T Q X + \Xi(U^{\ast}) + (\nabla J^{\ast})^T (F + GU^{\ast})
-$$
-
-This is obtained by combining the optimal control input (Eq. 19) with the Hamilton function (Eq. 18). Solving this HJB equation directly is intractable due to its nonlinearity and high dimensionality, which motivates the use of Actor-Critic reinforcement learning to approximate the optimal value function and control policy online.
----
-
-### 2.5 Shared Control Mechanism ⭐ CORE INNOVATION
-
-**Equation 21 — Shared Control Input:**
-
-$$
-\mathfrak{U} = U^* + \alpha U_h
-$$
-
-Where:
-- $\mathfrak{U}$ is the shared control input applied to the UAV
-- $U^*$ is the optimal control input from autonomy
-- $U_h$ is the human control input
-- $\alpha \in [0, 1]$ is the shared control parameter
-
-**Equation 22 — Adaptive Authority Allocation:**
-
-$$
-\alpha = \begin{cases}
-0, & \text{if } \eta \geq \beta_1 \\
-1, & \text{if } \eta \leq \beta_2 \\
-\frac{\eta - \beta_1}{\beta_2 - \beta_1}, & \text{otherwise}
-\end{cases}
-$$
-
-Where:
-- $\eta$ is the angle between the optimal control vector and human control vector
-- $\beta_1 = \frac{2\pi}{3}$ (120°) — upper threshold
-- $\beta_2 = \frac{\pi}{2}$ (90°) — lower threshold
-
-**Interpretation:**
-
-| Condition | Angle Range | α Value | Control Authority |
-|---|---|---|---|
-| $\eta \geq \beta_1$ | ≥ 120° | $\alpha = 0$ | Full autonomy (human input rejected) |
-| $\eta \leq \beta_2$ | ≤ 90° | $\alpha = 1$ | Full cooperation (human + autonomy) |
-| $\beta_2 < \eta < \beta_1$ | 90°–120° | $0 < \alpha < 1$ | Smooth transition zone |
-
-**Remark 2 (Optimality Guarantee):** When $\alpha = 0$, only the optimal control input is applied, achieving global optimality. When $\alpha = 1$ and $\eta = 0$ (human input aligns with optimal input), the shared control achieves optimality despite full human authority.
-
----
-
-### 2.6 Actor-Critic Approximation
-
-**Equation 23 — Value Function Reconstruction (Critic NN):**
-
-$$
-J^*(X) = W_c^T \phi_c(X) + \varepsilon_c(X)
-$$
-
-Where $W_c \in \mathbb{R}^{n_{\phi_c} \times 1}$ are the ideal critic NN weights and $\varepsilon_c(X)$ is the reconstruction error.
-
-**Equation 24 — Optimal Control Reconstruction (Actor NN):**
-
-$$
-U^*(X) = -\mu \tanh\left(\frac{R^{-1} \hat{G}^T (\nabla \phi_a)^T W_a}{2\mu}\right)
-$$
-
-Where $W_a \in \mathbb{R}^{n_{\phi_a} \times 1}$ are the ideal actor NN weights.
-
-**Equation 25 — Estimated Value Function:**
-
-$$
-\hat{J}(X) = \hat{W}_c^T \phi_c(X)
-$$
-
-Where $\hat{W}_c$ are the estimated critic NN weights.
-
-**Equation 26 — Estimated Optimal Control Input:**
-
-$$
-\hat{U}(X) = -\mu \tanh\left(\frac{R^{-1} \hat{G}^T \hat{W}_a^T \phi_a(X)}{2\mu}\right)
-$$
-
-Where $\hat{W}_a$ are the estimated actor NN weights.
-
-**Equation 27 — Estimated Shared Control Input:**
-
-$$
-\hat{\mathfrak{U}} = \hat{U} + \alpha U_h
-$$
-
-**Equation 28 — Shared Control Bellman Error:**
-
-$$
-\delta(X, \hat{W}_c, \hat{U}, U_h) = \nabla \hat{J}^T (\hat{F} + \hat{G}\hat{\mathfrak{U}} + D) + r(X, \hat{\mathfrak{U}})
-$$
-
-$$
-= \hat{W}_c^T \nabla \phi_c (\hat{F} + \hat{G}(\hat{U} + \alpha U_h) + D) + X^T Q X + \Xi(\hat{U} + \alpha U_h)
-$$
-
----
-
-### 2.7 Online Learning Update Laws
-
-**Equation 29 — Critic NN Weight Update Law:**
-
-$$
-\dot{\hat{W}}_c = -\frac{k_{c1} \delta \sigma}{(\sigma^T \sigma + 1)^2} - \frac{k_{c2}}{N} \sum_{k=1}^{N} \frac{\delta_k \sigma_k}{((\sigma_k)^T \sigma_k + 1)^2}
-$$
-
-Where:
-- $k_{c1}, k_{c2} > 0$ are critic learning rates
-- $\sigma = \nabla \phi_c^T(X)(F + G\hat{\mathfrak{U}} + D)$ is the regression vector
-- $\sigma_k = \nabla \phi_c^T(X_k)(F + G\hat{\mathfrak{U}}_k + D)$ is the $k$-th historical regression vector
-- $N$ is the experience replay stack size
-
-**Equation 30 — Actor NN Weight Update Law (Gradient Projection):**
-
-$$
-\dot{\hat{W}}_a = \text{Proj}(-k_a F_a (\hat{W}_a - \hat{W}_c))
-$$
-
-Where:
-- $k_a > 0$ is the actor learning rate
-- $F_a \in \mathbb{R}^{n_\phi \times n_\phi}$ is a positive definite matrix
-- $\text{Proj}(\cdot)$ is a projection operator ensuring bounded weights
-
----
-
-### 2.8 Stability Analysis
-
-**Equation 31 — Control Approximation Bound:**
-
-$$
-\|U^*(X) - \hat{U}(X)\|^2 \leq \Sigma \tilde{W}_a^T \tilde{W}_a + \Pi_u
-$$
-
-**Equation 32 — Bellman Error Decomposition:**
-
-$$
-\delta = -\sigma^T \tilde{W}_c + \frac{1}{4} \tilde{W}_a G_\sigma \tilde{W}_a + \Delta(X) + \xi_H
-$$
-
-**Equation 33 — Historical Bellman Error:**
-
-$$
-\delta_k = -(\sigma_k)^T \tilde{W}_c + \frac{1}{4} \tilde{W}_a G_k^\sigma \tilde{W}_a + \Delta_k(X)
-$$
-
-**Equation 34 — UUB Stability Condition:**
-
-$$
-\|\mho\| \geq \left(\frac{\Upsilon_{res}}{\lambda_{\min}(\mathcal{M})}\right)^{1/2}
-$$
-
-Where $\mho = [X^T, \tilde{W}_c^T, \tilde{W}_a^T]^T$.
-
-**Equation 35 — Lyapunov Function Derivative:**
-
-$$
-\dot{\mathcal{L}} = \nabla J^{\ast}(F + G \mho U^{\ast} + D) + \tilde{W}_c^T \dot{\hat{W}}_c^T + \tilde{W}_a^T \dot{\hat{W}}_a^T
-$$
-
-Where $\mho = \text{diag}(\mho_1, \mho_2, ..., \mho_m)$ with $\mho_i \in [1, 2]$ is the diagonal coefficient matrix associated with the shared control parameter $\alpha_i$. The shared control input is rewritten as $\hat{\mathfrak{U}}(i) = \hat{U}(i) + \alpha_i U_h(i) \approx \mho_i \hat{U}$.
-
-**Equation 36 — Full Lyapunov Derivative Expansion:**
-
-$$
-\dot{\mathcal{L}} = -X^T Q X - \Xi(\mho U^{\ast}) + \tilde{W}_a^T\left(-k_a F_a(\hat{W}_a - \hat{W}_c)\right)
-$$
-
-$$
-\quad - \tilde{W}_c^T\left(-\frac{k_{c1}\sigma}{\rho}\left(-\sigma^T \tilde{W}_c + \frac{1}{4}\tilde{W}_a^T G_\sigma \tilde{W}_a + \Delta\right)\right)
-$$
-
-$$
-\quad - \tilde{W}_c^T\left(-\frac{k_{c2}}{N}\sum_{k=1}^{N} \frac{\sigma_k}{\rho_k} \cdot \frac{1}{4}\tilde{W}_a^T G_k^\sigma \tilde{W}_a\right)
-$$
-
-$$
-\quad - \tilde{W}_c^T\left(-\frac{k_{c2}}{N}\sum_{k=1}^{N} \frac{\sigma_k}{\rho_k}\left(-(\sigma_k)^T \tilde{W}_a + \Delta_k\right)\right)
-$$
-Where $\rho = (\sigma^T\sigma + 1)^2$, $\rho_k = (\sigma_k^T\sigma_k + 1)^2$, and $\mho = \text{diag}(\mho_1, ..., \mho_m)$ with $\mho_i \in [1, 2]$ is the coefficient associated with the shared control parameter.
-
-This expansion is used in Theorem 1 to prove that the closed-loop system states and NN weight errors are Ultimately Uniformly Bounded (UUB).
-
-**Theorem 1:** Under Assumptions 2-4, the closed-loop system states $X$ and weight errors $[\tilde{W}_c^T, \tilde{W}_a^T]^T$ are **ultimately uniformly bounded (UUB)** when condition (34) is satisfied.
-
----
-
-### 2.9 Simplified Position Dynamics (HiTL Simulation)
-
-**Equation 37 — Simplified Position Control System:**
-
-Assuming small attitude angles ($\sin\phi \approx \phi$, $\cos\phi \approx 1$, $\sin\theta \approx \theta$, $\cos\theta \approx 1$):
-
-$$
-\begin{cases}
-\dot{p}_i = v_i, & i \in \{x, y, z\} \\
-\dot{v}_x = -g(\phi_d \sin\psi + \theta_d \cos\psi) \\
-\dot{v}_y = -g(-\phi_d \cos\psi + \theta_d \sin\psi) \\
-\dot{v}_z = g - f/m
-\end{cases}
-$$
-
-Where $p = [p_x, p_y, p_z]^T$ is position, $v = [v_x, v_y, v_z]^T$ is velocity, $\Theta = [\phi, \theta]^T$ is the desired attitude (human input), and tracking state is $X = [p - p_d, v - v_d]^T$.
-
-**Equation 38 — Basis Functions for HiTL:**
-
-$$
-\phi_c = \phi_a = [X(1)X(4), \; X(2)X(5), \; X(1)^3 X(4), \; X(2)^3 X(5)]
-$$
-
----
-
-### 2.10 Performance Metrics
-
-**Equation 39 — Position Smoothness Index (PSI):**
-
-$$
-\text{PSI} = \int_T \left\|\frac{d^3 p}{d\tau^3}\right\|^2 d\tau
-$$
-
-**Equation 40 — Attitude Smoothness Index (ASI):**
-
-$$
-\text{ASI} = \int_T \left\|\frac{d^3 \Theta}{d\tau^3}\right\|^2 d\tau
-$$
-
-**Equation 41 — Accumulated Tracking Error (ATE):**
-
-$$
-\text{ATE} = \int_T \|p - p_d\|^2 d\tau
-$$
-
-**Equation 42 — Accumulated Control Energy (ACE):**
-
-$$
-\text{ACE} = \int_T \|U\|^2 d\tau
-$$
-
-Where $U$ is the control input vector imposed on the UAV system. This metric measures the total control energy expended during the flight.
-
-
-
-
-
-## Algorithm 1: Data-Driven Optimal Shared Control of UAVs
+The system repeatedly performs the following operations:
 
 ```text
-Input: Actor-critic weights Ŵ_c, Ŵ_a, learning rates k_ci (i = 1, 2), k_a,
-       projection matrices F_a, experience replay stack, Koopman data set
-Output: Shared control input applied to UAV
-
-1:  Initialize actor-critic weights Ŵ_c, Ŵ_a, learning rates k_ci (i = 1, 2),
-    k_a, and projection matrices F_a
-2:  Initialize experience replay stack {𝔘, δ, {𝔘_j, δ_j}_{j=1}^N}
-    and Koopman data set {Y_K, X_K, U_K}
-3:  while t < T_end do
-4:      Collect human control input U_h and system state X
-5:      if UAV model is unknown then
-6:          Compute transfer function Θ([X^T, U_h^T]^T)
-7:          Update Koopman data set with Θ
-8:          Estimate dynamics matrices A, B using Eq. (12)
-9:          Calculate F̂ and Ĝ using Eq. (13)
-10:     end if
-11:     Estimate optimal control Û(X) using Eq. (26)
-12:     Compute and apply shared control input 𝔘 using Eq. (27)
-13:     Calculate Bellman error δ(X, Ŵ_c, Û, U_h) using Eq. (28)
-14:     Update experience replay stack with 𝔘 and δ
-15:     Update actor-critic weights Ŵ_c and Ŵ_a using Eq. (29) and Eq. (30)
-16: end while
+                 Keyboard Input
+                       |
+                       v
+          Generate Manual Commands
+                       |
+                       v
+       Read Drone Positions and Velocities
+                       |
+                       v
+              Update Obstacles
+                       |
+                       v
+        Calculate Relative Position
+             and Relative Velocity
+                       |
+                       v
+        Predict Closest Approach (CPA)
+                       |
+                       v
+         Calculate Avoidance Direction
+            and Threat Strength
+                       |
+                       v
+          Select MANUAL or AUTO Mode
+                       |
+                       v
+        Smooth and Constrain Velocity
+                       |
+                       v
+          Update Target Position
+                       |
+                       v
+              DSLPIDControl
+                       |
+                       v
+          Four Motor RPM Commands
+                       |
+                       v
+              PyBullet Physics
+                       |
+                       v
+        Update Cameras and Flight Trails
+                       |
+                       +---- Repeat ----+
 ```
 
+Each drone has independent mode-selection and avoidance logic, but both operate within the same simulation environment.
+
+## 7. How the Project Works
+
+### Step 1: Initialize the simulation
+
+The program creates a `CtrlAviary` environment containing two CF2X quadrotor models. The drones are initialized at configured positions, and the environment includes a floor and multiple obstacles.
+
+### Step 2: Capture keyboard input
+
+A keyboard listener records pressed keys. A short warm-up period allows the simulation to initialize before movement commands are accepted.
+
+### Step 3: Read drone states
+
+The program obtains the current position, velocity, and orientation information for each drone.
+
+These values are used to understand the drone's movement and determine how its commanded direction relates to its heading.
+
+### Step 4: Generate manual movement commands
+
+Keyboard inputs are converted into forward, backward, left, right, upward, and downward velocity commands.
+
+Horizontal movement depends on the drone's yaw angle. The resulting vector is normalized when necessary and scaled to respect the configured manual speed limit.
+
+### Step 5: Update moving obstacles
+
+The positions of the three moving spheres are updated using mathematical functions of simulation time.
+
+Their velocities are obtained from the derivatives of these functions.
+
+### Step 6: Assess collision risk
+
+For each obstacle, the program calculates:
+
+1. Relative position.
+2. Relative velocity.
+3. Current surface-to-surface gap.
+4. Predicted time of closest approach.
+5. Predicted relative position.
+6. Effective gap and avoidance strength.
+
+The pillar is assessed in the horizontal plane, whereas spherical obstacles and the other drone are assessed in three dimensions.
+
+### Step 7: Calculate an avoidance direction
+
+When an obstacle is considered a threat, the program calculates a direction away from the predicted close-approach point.
+
+It combines this direction with a lateral passing direction. The selected passing side is remembered while the obstacle remains active to reduce unnecessary left-right switching.
+
+Contributions from multiple active obstacles are combined.
+
+### Step 8: Select a control mode
+
+Each drone independently decides whether to remain in MANUAL mode or switch to AUTO mode.
+
+Emergency proximity can trigger automatic intervention even when the user is pressing movement keys.
+
+The system can return to MANUAL mode after the configured clear-path period or when another permitted exit condition is met.
+
+### Step 9: Smooth and constrain movement
+
+The desired velocity is approached gradually using acceleration limits.
+
+The target position is updated and constrained to the configured arena and altitude boundaries. A target-position leash prevents the target from moving too far away from the current drone position in one update.
+
+### Step 10: Calculate motor commands
+
+`DSLPIDControl` receives the current drone state and desired target state. It calculates the four motor RPM commands required to move toward the target.
+
+PyBullet then simulates the drone's physical response.
+
+### Step 11: Visualize the simulation
+
+The program updates multiple camera views and draws colored trails representing the recent paths of both drones.
+
+The control loop continues until the application is stopped.
+
+## 8. Mathematical Formulas
+
+This section describes the principal mathematical concepts used by the obstacle-avoidance system.
+
+All position and velocity vectors use three-dimensional coordinates unless otherwise specified.
+
+### 8.1 Position and velocity vectors
+
+The position of a drone or obstacle is represented by:
+
+$$
+\mathbf{p} =
+\begin{bmatrix}
+x\\y\\z
+\end{bmatrix}
+$$
+
+Its velocity is represented by:
+
+$$
+\mathbf{v} =
+\begin{bmatrix}
+v_x\\v_y\\v_z
+\end{bmatrix}
+$$
+
+Where:
+
+- \(x,y,z\): position coordinates in metres.
+- \(v_x,v_y,v_z\): velocity components in metres per second.
+
+The magnitude of a vector is:
+
+$$
+\|\mathbf{a}\| =
+\sqrt{a_x^2+a_y^2+a_z^2}
+$$
+
+Vector magnitude is used to calculate distances, speeds, and normalized directions.
+
+### 8.2 Relative position
+
+Let \(\mathbf{p}_d\) represent the drone position and \(\mathbf{p}_o\) represent the obstacle position.
+
+The relative position is:
+
+$$
+\mathbf{r}=\mathbf{p}_o-\mathbf{p}_d
+$$
+
+This vector points from the drone toward the obstacle.
+
+For the pillar, vertical separation is ignored:
+
+$$
+\mathbf{r}_{xy} =
+\begin{bmatrix}
+x_o-x_d\\
+y_o-y_d\\
+0
+\end{bmatrix}
+$$
+
+For spherical obstacles, all three coordinates are considered.
+
+### 8.3 Relative velocity
+
+Let \(\mathbf{v}_d\) be the drone velocity and \(\mathbf{v}_o\) be the obstacle velocity.
+
+The relative velocity is:
+
+$$
+\mathbf{v}_r=\mathbf{v}_o-\mathbf{v}_d
+$$
+
+Relative velocity describes how the obstacle moves compared with the drone.
+
+An obstacle can be far away but still present a threat if their relative motion is bringing them closer together.
+
+### 8.4 Current surface-to-surface gap
+
+The centre-to-centre distance is:
+
+$$
+d=\|\mathbf{r}\|
+$$
+
+The estimated free gap is:
+
+$$
+g=d-R_o-R_d
+$$
+
+Where:
+
+- \(R_o\): configured effective obstacle radius.
+- \(R_d\): configured effective drone radius.
+
+The project uses:
+
+- `DRONE_RADIUS = 0.10 m`
+- `OTHER_DRONE_RADIUS = 0.12 m`
+
+For boxes and pillars, configured effective sizes are used in the avoidance representation. These are approximations rather than exact distances to every obstacle surface.
+
+A negative gap indicates overlap according to the simplified radius-based model.
+
+### 8.5 Time of Closest Approach (CPA)
+
+The Time of Closest Approach estimates when the drone and obstacle will have their minimum relative separation, assuming constant relative velocity.
+
+The formula is:
+
+$$
+t_{\mathrm{CPA}} =
+\operatorname{clip}
+\left(
+-\frac{\mathbf{r}\cdot\mathbf{v}_r}
+{\mathbf{v}_r\cdot\mathbf{v}_r},
+0,T
+\right)
+$$
+
+Where:
+
+- \(\mathbf{r}\): current relative position.
+- \(\mathbf{v}_r\): relative velocity.
+- \(\cdot\): dot product.
+- \(T\): maximum prediction horizon.
+- `clip`: restricts the result to the interval from \(0\) to \(T\).
+
+The project uses:
+
+`PREDICT_HORIZON = 2.0 s`
+
+If relative velocity is almost zero, the implementation uses \(t_{\mathrm{CPA}}=0\) to avoid unstable division.
+
+**Interpretation:** CPA estimates the time of minimum separation within the prediction horizon. It is a mathematical approximation, not a complete simulation of future trajectories.
+
+### 8.6 Predicted relative position
+
+The predicted relative position at the CPA time is:
+
+$$
+\mathbf{r}_{\mathrm{pred}}
+=
+\mathbf{r}+\mathbf{v}_r t_{\mathrm{CPA}}
+$$
+
+The predicted gap is:
+
+$$
+g_{\mathrm{pred}}
+=
+\|\mathbf{r}_{\mathrm{pred}}\|-R_o-R_d
+$$
+
+The effective gap is:
+
+$$
+g_{\mathrm{effective}}
+=
+\min(g,g_{\mathrm{pred}})
+$$
+
+This allows the avoidance logic to consider both the current separation and the predicted closest separation.
+
+### 8.7 Avoidance strength
+
+The avoidance strength is calculated as:
+
+$$
+s =
+\operatorname{clip}
+\left(
+\frac{D_{\mathrm{avoid}}-g_{\mathrm{effective}}}
+{D_{\mathrm{avoid}}},
+0,1
+\right)
+$$
+
+Where:
+
+`AVOID_DISTANCE = 1.5 m`
+
+Interpretation:
+
+- If the effective gap is at or above the avoidance distance, \(s=0\).
+- As the effective gap decreases, the avoidance strength increases.
+- At zero effective gap or below, the strength reaches \(1\).
+
+This is a linear rule-based calculation, not a probability or machine-learning prediction.
+
+The implementation also uses `PREDICT_RANGE = 2.5 m` as a current-gap cutoff for generating avoidance contributions. The nearest current gap is tracked separately for emergency checks.
+
+### 8.8 Direction away from the predicted approach
+
+The initial avoidance vector points away from the predicted relative position:
+
+$$
+\mathbf{a}=-\mathbf{r}_{\mathrm{pred}}
+$$
+
+If the predicted vector is too small, the implementation falls back to the negative current relative position.
+
+The vector is then normalized:
+
+$$
+\hat{\mathbf{a}}=
+\frac{\mathbf{a}}{\|\mathbf{a}\|}
+$$
+
+The vertical component is scaled by \(0.5\), reducing its contribution relative to the unscaled direction.
+
+### 8.9 Lateral passing direction
+
+Let the horizontal heading direction be \((h_x,h_y)\).
+
+The left-of-heading vector is:
+
+$$
+\mathbf{l} =
+\begin{bmatrix}
+-h_y\\h_x\\0
+\end{bmatrix}
+$$
+
+The program selects a passing side and stores it in `side_memory`.
+
+The combined direction is:
+
+$$
+\mathbf{q}
+=
+\hat{\mathbf{a}}
++
+0.9\mathbf{l}_{\mathrm{chosen}}
+$$
+
+The resulting direction is normalized:
+
+$$
+\hat{\mathbf{q}}=
+\frac{\mathbf{q}}{\|\mathbf{q}\|}
+$$
+
+The factor \(0.9\) controls the contribution of the selected lateral passing direction.
+
+### 8.10 Combining avoidance contributions
+
+For multiple active obstacles, the program adds their weighted avoidance directions:
+
+$$
+\mathbf{e}=\sum_i s_i\hat{\mathbf{q}}_i
+$$
+
+Where:
+
+- \(s_i\): avoidance strength for obstacle \(i\).
+- \(\hat{\mathbf{q}}_i\): normalized avoidance direction for obstacle \(i\).
+- \(\mathbf{e}\): total avoidance vector.
+
+The implementation also tracks the maximum active avoidance strength and whether any avoidance threat is active.
+
+### 8.11 Manual movement relative to yaw
+
+Let \(\psi\) be the drone's yaw angle.
+
+The horizontal forward and left unit vectors are:
+
+$$
+\mathbf{f}=
+\begin{bmatrix}
+\cos\psi\\
+\sin\psi
+\end{bmatrix}
+$$
+
+$$
+\mathbf{l}=
+\begin{bmatrix}
+-\sin\psi\\
+\cos\psi
+\end{bmatrix}
+$$
+
+For forward/backward input \(u_f\) and left/right input \(u_l\):
+
+$$
+v_x=u_f\cos\psi-u_l\sin\psi
+$$
+
+$$
+v_y=u_f\sin\psi+u_l\cos\psi
+$$
+
+The vertical command is:
+
+$$
+v_z=u_z
+$$
+
+The resulting vector is normalized if its magnitude exceeds \(1\), then scaled by the maximum manual speed:
+
+$$
+\mathbf{v}_{\mathrm{manual}}
+\leftarrow
+\mathbf{v}_{\mathrm{manual}}V_{\max}
+$$
+
+Where:
+
+`MAX_SPEED = 0.50 m/s`
+
+This prevents diagonal keyboard inputs from exceeding the configured manual speed.
+
+### 8.12 Automatic avoidance speed
+
+When AUTO mode is active and the avoidance vector is non-zero:
+
+$$
+V_{\mathrm{avoid}}
+=
+V_a\min(1,\|\mathbf{e}\|)
+$$
+
+Where:
+
+`AVOID_SPEED = 0.60 m/s`
+
+The desired velocity becomes:
+
+$$
+\mathbf{v}_{\mathrm{desired}}
+=
+\frac{\mathbf{e}}{\|\mathbf{e}\|}
+V_{\mathrm{avoid}}
+$$
+
+During emergency proximity, the configured speed is:
+
+`EMERGENCY_SPEED = 0.90 m/s`
+
+If AUTO mode has no active avoidance vector, the desired velocity is set to zero so the drone can brake toward a hover target.
+
+### 8.13 Emergency condition
+
+The emergency condition is based on the nearest current surface gap:
+
+$$
+\text{emergency}
+=
+(g_{\mathrm{nearest}}<D_{\mathrm{emergency}})
+$$
+
+Where:
+
+`EMERGENCY_DISTANCE = 0.65 m`
+
+When this condition is satisfied, the mode logic can override manual movement commands and use a higher velocity-change limit.
+
+### 8.14 Velocity slew limiting
+
+The difference between desired and current commanded velocity is:
+
+$$
+\Delta\mathbf{v}
+=
+\mathbf{v}_{\mathrm{desired}}
+-
+\mathbf{v}_{\mathrm{current}}
+$$
+
+The maximum permitted change during one time step is:
+
+$$
+\Delta v_{\max}=a_{\max}\Delta t
+$$
+
+If the change exceeds this limit, it is scaled:
+
+$$
+\Delta\mathbf{v}
+\leftarrow
+\Delta\mathbf{v}
+\min\left(
+1,
+\frac{\Delta v_{\max}}{\|\Delta\mathbf{v}\|}
+\right)
+$$
+
+The updated velocity is:
+
+$$
+\mathbf{v}_{\mathrm{new}}
+=
+\mathbf{v}_{\mathrm{current}}
++
+\Delta\mathbf{v}
+$$
+
+Configuration values:
+
+- `MAX_ACCEL = 1.0 m/s²`
+- `EMERGENCY_ACCEL = 2.2 m/s²`
+
+This reduces sudden changes in commanded velocity while allowing a stronger response during emergencies.
+
+### 8.15 Target position update and leash
+
+The target position is updated using the commanded velocity:
+
+$$
+\mathbf{p}_{\mathrm{target,new}}
+=
+\mathbf{p}_{\mathrm{target,old}}
++
+\mathbf{v}_{\mathrm{cmd}}\Delta t
+$$
+
+The target is constrained to the configured arena:
+
+$$
+-4.5\leq x\leq4.5
+$$
+
+$$
+-4.5\leq y\leq4.5
+$$
+
+$$
+0.35\leq z\leq2.5
+$$
+
+The leash distance is:
+
+`LEASH = 0.30 m`
+
+If the target error is:
+
+$$
+\mathbf{d}
+=
+\mathbf{p}_{\mathrm{target}}
+-
+\mathbf{p}_{\mathrm{drone}}
+$$
+
+and \(\|\mathbf{d}\|>L\), the target is constrained to:
+
+$$
+\mathbf{p}_{\mathrm{target}}
+=
+\mathbf{p}_{\mathrm{drone}}
++
+\mathbf{d}\frac{L}{\|\mathbf{d}\|}
+$$
+
+This limits target-position jumps but does not independently guarantee collision-free movement.
+
+### 8.16 Yaw update
+
+When a turn key is held, the target yaw changes according to:
+
+$$
+\psi_{\mathrm{target,new}}
+=
+\operatorname{wrap}
+\left(
+\psi_{\mathrm{target,old}}
++
+u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t
+\right)
+$$
+
+Where:
+
+- \(\omega_{\mathrm{yaw}}=0.8\ \mathrm{rad/s}\).
+- `YAW_RATE = 0.8 rad/s`.
+- `wrap` keeps the angle within \([-\pi,\pi)\).
+
+### 8.17 Physics and control time steps
+
+The simulation uses the following configured frequencies:
+
+- Physics frequency: `PYB_FREQ = 240 Hz`
+- Control frequency: `CTRL_FREQ = 48 Hz`
+
+The corresponding time steps are:
+
+$$
+\Delta t_{\mathrm{physics}}
+=
+\frac{1}{240}
+\approx0.00417\ \mathrm{s}
+$$
+
+$$
+\Delta t_{\mathrm{control}}
+=
+\frac{1}{48}
+\approx0.02083\ \mathrm{s}
+$$
+
+The physics simulation runs at a higher frequency than the control logic, allowing more frequent physics integration.
+
+### 8.18 PID control
+
+A conventional PID controller is described by:
+
+$$
+u(t)
+=
+K_Pe(t)
++
+K_I\int_0^t e(\tau)\,d\tau
++
+K_D\frac{de(t)}{dt}
+$$
+
+Where:
+
+- \(e(t)\): control error.
+- \(K_P\): proportional gain.
+- \(K_I\): integral gain.
+- \(K_D\): derivative gain.
+- \(u(t)\): controller output.
+
+The project calls `DSLPIDControl.computeControlFromState(...)` to calculate the four motor RPM commands.
+
+**Implementation detail:** The PID controller is provided by `gym-pybullet-drones`; the project does not implement the complete PID equation directly in the main script. The equation explains the general PID principle.
 
 ---
 
-## 4. Simulation Parameters
+## 9. Obstacle Types and Motion Equations
 
-### 4.1 Example 1: Numerical Simulation
+The environment contains two static obstacles, three moving spheres, and the other drone.
 
-| Parameter | Value |
-|---|---|
-| Initial state $X_0$ | $0.03[1_3, 0_3]$ |
-| Initial critic weights $W_{c0}$ | $0.15(1_9 + \text{rand}(9))$ |
-| Initial actor weights $W_{a0}$ | $0.15(1_9 + \text{rand}(9))$ |
-| Saturation bound $\mu_{sat}$ | $0.5$ |
-| Inertia $\gamma_\phi$ | $0.0211$ kg·m² |
-| Inertia $\gamma_\theta$ | $0.0219$ kg·m² |
-| Inertia $\gamma_\psi$ | $0.0366$ kg·m² |
-| Control gain $B_\gamma$ | $\text{diag}([41, 41, 110])$ |
-| Control penalty $R$ | $I_2$ |
-| State penalty $Q$ | $I_6$ |
-| Critic learning rates $k_{c1}, k_{c2}$ | $2, 1$ |
-| Actor learning rate $k_a$ | $1$ |
-| Actor projection $F_a$ | $I_6$ |
-| Human controller | PD: $U_h = -K_p X - K_d \dot{X}$, $K_p=3$, $K_d=0.5$ |
-| Desired trajectory | $X_d = [A_\phi\sin(\omega t), A_\theta\cos(\omega t), A_\psi\sin(\omega t)]^T$ |
-| Amplitude $A_\phi = A_\theta = A_\psi$ | $0.1$ |
-| Frequency $\omega$ | $0.5$ |
-| Simulation time | $10$ s |
-| Step size | $0.001$ s |
-| ODE Solver | Fourth-order Runge-Kutta |
+### 9.1 Static pillar
 
-**Basis functions (Example 1):**
+Configuration:
+
+```python
+PILLAR = (2.0, 0.0, 0.25, 2.5)
+# x, y, radius, height
+```
+
+The pillar remains at a fixed horizontal location.
+
+The avoidance calculation ignores vertical separation when assessing the pillar. Therefore, its gap represents horizontal clearance rather than an exact three-dimensional cylinder-surface distance.
+
+### 9.2 Static box
+
+Configuration:
+
+```python
+BOX_POS = [3.0, 1.5, 1.0]
+BOX_HALF = 0.30
+```
+
+The box is created in PyBullet. The avoidance logic uses an effective radius to approximate its size.
+
+This approximation is not an exact distance-to-box-surface calculation.
+
+### 9.3 Moving sphere 1 — Patrol
+
+The sphere moves back and forth along the Y-axis:
 
 $$
-\phi_c = \phi_a = [X(1)^2, X(1)X(4), X(4)^2, X(2)^2, X(2)X(5), X(5)^2, X(3)^2, X(3)X(6), X(6)^2]
+x(t)=1.0
 $$
 
-**Compared methods:** Proposed, ADP [Ma et al. 2024], MDA [Broad et al. 2020]
+$$
+y(t)=2\sin(0.35t)
+$$
 
-**Result:** The proposed method achieves **19-48% RMSE improvement** and lowest control cost.
+$$
+z(t)=1.0
+$$
 
-### 4.2 Example 2: Human-in-the-Loop Simulation
+Its velocity is:
 
-| Parameter | Value |
-|---|---|
-| Environment | RflySim + MATLAB R23b Simulink |
-| Input device | Logitech F310 gamepad |
-| Task | Fly through two circles (radius 10m) |
-| Circle 1 center | $[250, 75, 100]$ m |
-| Circle 2 center | $[500, -75, 100]$ m |
-| Circle 1 time $T_{c1}$ | $30$ s |
-| Circle 2 time $T_{c2}$ | $60$ s |
-| State penalty $Q$ | $\text{diag}([10000, 10000, 10000, 0.1, 0.1, 0.1])$ |
-| Control penalty $R$ | $10000 \times I_3$ |
-| History stack size $N$ | $30$ |
-| Learning rate $\alpha$ | $0.001$ |
-| Initial weights $W_{c0} = W_{a0}$ | $2 \times 1_4$ |
-| Simulation time | $60$ s |
-| Step size | $0.001$ s |
-| ODE Solver | Fourth-order Runge-Kutta |
-| Joystick resolution | $1/256$ |
-| Joystick value range | $[-0.5, 0.5]$ |
+$$
+v_x(t)=0
+$$
 
-**Result:** The proposed method saves **35.65% control cost** compared to human-only control.
+$$
+v_y(t)=0.7\cos(0.35t)
+$$
 
-### 4.3 Performance Comparison Results
+$$
+v_z(t)=0
+$$
 
-| Method | PSI ↓ | ASI | ATE ↓ | ACE ↓ |
-|---|---|---|---|---|
-| **Proposed** | **57.74** | 39.16 | **514.72** | **40.73** |
-| ADP only | 66.95 | **5.51** | 945.93 | 46.30 |
-| Human only | 98.54 | 127.58 | 918.97 | 47.01 |
+This creates a predictable back-and-forth movement pattern.
 
-### 4.4 Cooperation Proportion
+### 9.4 Moving sphere 2 — Orbit
 
-| Index | Roll Control | Pitch Control | All Control |
-|---|---|---|---|
-| Cooperative time (%) | 54.04 | 80.38 | 90.05 |
-| Cost of Human Control | 7.52 × 10³ | 1.50 × 10⁴ | 2.25 × 10⁴ |
-| Cost of Shared Control | 2.89 × 10³ | 1.16 × 10⁴ | 1.45 × 10⁴ |
-| **Control Cost Saving (%)** | **61.52** | **22.68** | **35.65** |
+The sphere moves in a horizontal circular path around \((-1.5,1.0)\):
 
----
+$$
+x(t)=-1.5+1.2\cos(0.40t)
+$$
 
-## 5. Multi-Simulator Validation Strategy
+$$
+y(t)=1.0+1.2\sin(0.40t)
+$$
 
-This project adapts the base paper's MATLAB/RflySim framework to an open-source multi-simulator stack:
+$$
+z(t)=1.2
+$$
 
-| Simulator | Role | Purpose |
+Its velocity is:
+
+$$
+v_x(t)=-0.48\sin(0.40t)
+$$
+
+$$
+v_y(t)=0.48\cos(0.40t)
+$$
+
+$$
+v_z(t)=0
+$$
+
+The orbit radius is \(1.2\) metres, and the angular rate is \(0.40\) radians per second.
+
+### 9.5 Moving sphere 3 — Vertical bob
+
+The sphere oscillates vertically:
+
+$$
+x(t)=2.5
+$$
+
+$$
+y(t)=-2.2
+$$
+
+$$
+z(t)=1.2+0.6\sin(0.80t)
+$$
+
+Its vertical velocity is:
+
+$$
+v_z(t)=0.48\cos(0.80t)
+$$
+
+The horizontal velocity components are zero.
+
+The sphere oscillates around a height of \(1.2\) metres.
+
+### 9.6 The other drone
+
+Each drone includes the other drone's current position and velocity in its obstacle list.
+
+This allows both drones to use the same relative-position, relative-velocity, and closest-approach calculations for drone-to-drone avoidance.
+
+## 10. Keyboard Controls
+
+The drones use separate keyboard layouts.
+
+| Action | Drone 1 (Blue) | Drone 2 (Pink) |
 |---|---|---|
-| **Gym-PyBullet Drones** | RL Training | Lightweight environment for Actor-Critic policy training and maneuver data generation |
-| **MuJoCo** | Physics Validation | High-fidelity dynamics, disturbance rejection, robustness testing |
-| **Gazebo / ROS** | Sensor Simulation | Camera, depth, LiDAR, obstacle environment rendering |
-| **ArduPilot SITL** | Flight Controller Validation | MAVLink telemetry, waypoint missions, failsafes, real autopilot logic |
+| Forward | `W` | `I` |
+| Backward | `S` | `K` |
+| Left | `A` | `J` |
+| Right | `D` | `L` |
+| Move up | `E` | `O` |
+| Move down | `Q` | `U` |
+| Turn left | `Z` | `N` |
+| Turn right | `C` | `M` |
+| Exit | `ESC` | `ESC` |
 
-### Data Flow Across Simulators
+**Note:** The keyboard listener uses global keyboard events, so controls may work even when the simulation window is not focused. Some keyboards may not reliably register many simultaneous key presses because of hardware key-rollover limitations.
 
-Human Maneuver Data
-↓
-Koopman EDMD (Eq. 12) → Linearized Dynamics [A, B]
-↓
-Actor-Critic RL (Eq. 26) → Optimal Control U*
-↓
-Shared Control Allocator (Eq. 21-22) → U_shared
-↓
-Multi-Simulator Validation
-├── PyBullet (RL baseline)
-├── MuJoCo (disturbance robustness)
-├── Gazebo (perception + obstacles)
-└── ArduPilot SITL (real autopilot + MAVLink)
+## 11. Control Modes and Safety Logic
 
+### MANUAL Mode
 
-### Simulator-Specific Roles
+- The drone follows keyboard movement commands.
+- Turning keys update the target yaw.
+- Obstacle assessment continues during manual flight.
+- Emergency proximity can override manual commands.
+- Outside emergency conditions, the mode-selection logic determines when automatic avoidance can activate.
 
-| Simulator | Data Generated | Validation Focus |
-|---|---|---|
-| Gym-PyBullet | State transitions, control inputs | RL policy convergence, baseline performance |
-| MuJoCo | High-fidelity state dynamics | Koopman model accuracy under disturbances |
-| Gazebo | Camera/depth/LiDAR observations | Perception integration, obstacle avoidance |
-| ArduPilot SITL | MAVLink telemetry, mission data | Real autopilot behavior, waypoint tracking |
+### AUTO Mode
 
----
+- The drone follows the generated avoidance direction.
+- A higher configured speed can be used during emergency proximity.
+- If no avoidance vector is active, the desired velocity becomes zero.
+- The drone can return to MANUAL mode after the path remains clear for the configured period.
+- Other exit conditions include permitted manual-control requests and the normal AUTO timeout.
 
-## 6. Conceptual Explanation (Team Research)
+### Mode-related parameters
 
-A detailed explanatory report on the Koopman Operator and EDMD framework for UAV shared control has been prepared by the team. The key concepts are summarized below:
+| Parameter | Default | Purpose |
+|---|---:|---|
+| `AVOID_DISTANCE` | 1.5 m | Distance at which avoidance strength begins to increase. |
+| `EMERGENCY_DISTANCE` | 0.65 m | Threshold for emergency behavior. |
+| `PREDICT_RANGE` | 2.5 m | Current-gap cutoff for generating avoidance contributions. |
+| `PREDICT_HORIZON` | 2.0 s | Maximum future time used for closest-approach prediction. |
+| `RELEASE_HOLD` | 0.8 s | Clear-path duration used when leaving AUTO mode. |
+| `AUTO_MAX_TIME` | 3.0 s | Normal maximum duration of AUTO mode; emergency behavior may extend it. |
+| `MANUAL_GRACE` | 1.5 s | Delay after handing control back before another non-emergency automatic handover. |
 
-### Koopman Operator Concept
+This is a hybrid control system because it combines user-driven commands with rule-based automatic intervention.
 
-The Koopman operator provides a way to represent nonlinear dynamics through the evolution of observable functions:
+## 12. PID Control and Drone Physics
 
-$$
-z_k = \Theta(x_k)
-$$
+Obstacle avoidance determines **where the drone should try to move**. It does not directly calculate the four motor outputs.
 
-Where $\Theta$ is a vector of observable functions that "lift" the original state into a higher-dimensional space. In this lifted space, the dynamics become approximately linear:
+The high-level logic produces a desired velocity and target position. The `DSLPIDControl` controller compares the current drone state with the target state and calculates motor RPM commands.
 
-$$
-z_{k+1} \approx Az_k + Bu_k
-$$
+PyBullet then simulates the physical effects of those commands.
 
-### EDMD Workflow
-Flight Data → Observable Transformation → EDMD → Koopman Model
-
-
-
-The EDMD algorithm:
-1. Collects state transitions $(x_k, u_k, x_{k+1})$
-2. Applies observable functions to lift the state: $z_k = \Theta(x_k)$
-3. Constructs data matrices $X_K$, $Y_K$, $U_K$
-4. Computes the pseudo-inverse to estimate $[A, B]$
-5. Validates prediction accuracy using MAE and RMSE
-
-### Key Insight
-    Koopman → Representation
-EDMD → Learning Dynamics
-Actor-Critic → Decision
-Shared Control → Cooperation
-ArduPilot/PX4 → Flight Control
-YOLO → Perception
-
-
-### Complete System Architecture
-
-Camera → Perception → Decision Engine → AI Controller → Shared Control → ArduPilot → UAV → State Measurement → EDMD/Koopman
-
-## 7. Repository Structure
-
-## 7. Repository Structure
+The process is:
 
 ```text
-CD6_AI-drone-copilot/
-│
-├── docs/
-│   ├── base_paper_summary.md
-│   └── team_research_report.md
-│
-├── architecture_diagrams/
-│
-├── src/
-│   ├── koopman/
-│   │   ├── edmd.py
-│   │   └── observable_functions.py
-│   │
-│   ├── dynamics_estimator.py
-│   │
-│   ├── rl/
-│   │   ├── actor_critic.py
-│   │   ├── bellman_error.py
-│   │   └── replay_buffer.py
-│   │
-│   ├── shared_control/
-│   │   ├── authority_allocation.py
-│   │   └── shared_controller.py
-│   │
-│   ├── ardupilot_bridge/
-│   │
-│   └── telemetry_reader.py
-│
-├── visualization/
-│   └── plot_results.py
-│
-├── simulation/
-│   ├── pybullet/
-│   └── mujoco/
-│
-├── gazebo/
-│   └── ardupilot_sitl/
-│
-├── data/
-│   ├── human_maneuvers/
-│   └── koopman_datasets/
-│
-├── telemetry_logs/
-│
-├── models/
-│   ├── koopman_matrices/
-│   ├── actor_weights/
-│   └── critic_weights/
-│
-├── notebooks/
-│   ├── edmd_demo.ipynb
-│   └── shared_control_demo.ipynb
-│
-├── tests/
-│   ├── test_shared_control.py
-│   ├── test_koopman.py
-│   └── test_telemetry_reader.py
-│
+Manual Control / Obstacle Avoidance
+                 |
+                 v
+       Desired Velocity and Position
+                 |
+                 v
+            DSLPIDControl
+                 |
+                 v
+        Four Motor RPM Commands
+                 |
+                 v
+           PyBullet Physics
+                 |
+                 v
+       Updated Drone State
+                 |
+                 +---- Feedback ----+
+```
+
+The updated state is used in the next control iteration.
+
+The key distinction is that obstacle avoidance is the **high-level decision layer**, while PID-based control is the **low-level flight-control layer**.
+
+## 13. Camera Display and Flight Trails
+
+The project provides visual feedback through multiple camera viewpoints.
+
+- Camera images are rendered from different viewpoints.
+- OpenCV combines and labels the camera tiles.
+- Each tile is configured to be `320 × 240` pixels.
+- Blue and pink trails display the recent paths of the two drones.
+- Trails help visualize movement but do not directly affect control or collision avoidance.
+
+## 14. Configuration Parameters
+
+The main configuration values are defined near the top of the Python source file.
+
+| Parameter | Default | Purpose |
+|---|---:|---|
+| `PYB_FREQ` | 240 Hz | Physics simulation frequency. |
+| `CTRL_FREQ` | 48 Hz | Control update frequency. |
+| `NUM_DRONES` | 2 | Number of simulated drones. |
+| `MAX_SPEED` | 0.50 m/s | Maximum manual commanded speed. |
+| `AVOID_SPEED` | 0.60 m/s | Base automatic avoidance speed. |
+| `EMERGENCY_SPEED` | 0.90 m/s | Speed configured for emergency avoidance. |
+| `MAX_ACCEL` | 1.0 m/s² | Normal commanded-velocity change limit. |
+| `EMERGENCY_ACCEL` | 2.2 m/s² | Emergency commanded-velocity change limit. |
+| `LEASH` | 0.30 m | Maximum target distance from the current position. |
+| `YAW_RATE` | 0.8 rad/s | Target yaw change rate. |
+| `Z_MIN` | 0.35 m | Minimum target altitude. |
+| `Z_MAX` | 2.5 m | Maximum target altitude. |
+| `XY_LIMIT` | 4.5 m | Absolute X/Y target boundary. |
+| `DRONE_RADIUS` | 0.10 m | Effective radius used for drone gap estimates. |
+| `OTHER_DRONE_RADIUS` | 0.12 m | Effective radius used for the other drone. |
+| `TILE_W` | 320 px | Camera tile width. |
+| `TILE_H` | 240 px | Camera tile height. |
+
+Changing these parameters can affect the system's behavior.
+
+For example, increasing `AVOID_DISTANCE` causes avoidance strength to begin increasing at a larger gap. Parameters should be evaluated together because changing one value can affect the overall behavior.
+
+## 15. Installation
+
+### Prerequisites
+
+- Python installed on your computer.
+- A desktop environment that supports PyBullet GUI windows and OpenCV display windows.
+- The project source file, such as `33(1).py`.
+
+### Step 1: Create a project folder
+
+Open PowerShell or the VS Code terminal and navigate to your project directory.
+
+### Step 2: Create a virtual environment
+
+```powershell
+python -m venv .venv
+```
+
+### Step 3: Activate the environment
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation, use the virtual environment's Python executable directly.
+
+### Step 4: Install dependencies
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install numpy opencv-python pynput pybullet gym-pybullet-drones
+```
+
+If the environment is not activated, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install numpy opencv-python pynput pybullet gym-pybullet-drones
+```
+
+**Compatibility note:** Package compatibility depends on the Python version and the versions of `gym-pybullet-drones`, PyBullet, and NumPy. If installation fails, check the error message and the package's supported versions rather than installing arbitrary versions.
+
+## 16. How to Run
+
+1. Save the Python source file in your project folder.
+2. Open the project folder in Visual Studio Code.
+3. Open **Terminal → New Terminal**.
+4. Ensure the correct Python environment is selected.
+5. Run the program.
+
+If the file is named `33(1).py`:
+
+```powershell
+python "33(1).py"
+```
+
+If the file has been renamed to `main.py`:
+
+```powershell
+python main.py
+```
+
+The simulation should open in a graphical window.
+
+Wait for the warm-up period and then use the keyboard controls.
+
+To exit, press `ESC` as handled by the application.
+
+## 17. Testing the Project
+
+The following test scenarios can be used during demonstrations and project reviews.
+
+| Test | Procedure | Expected observation |
+|---|---|---|
+| Manual flight | Move Drone 1 using `W/A/S/D`. | Drone 1 responds to keyboard commands. |
+| Independent control | Move Drone 2 using `I/J/K/L`. | Drone 2 responds to its separate key set. |
+| Vertical movement | Use `E/Q` and `O/U`. | The respective drones receive vertical movement commands. |
+| Yaw control | Use `Z/C` or `N/M`. | Heading changes affect the horizontal movement direction. |
+| Static obstacle | Guide a drone toward the pillar or box. | Automatic avoidance may activate according to the threat and mode logic. |
+| Moving obstacle | Observe the moving spheres. | The avoidance system responds to their changing positions and velocities. |
+| Drone-to-drone interaction | Guide the drones toward the same region carefully. | Each drone independently assesses the other drone as an obstacle. |
+| Mode handover | Release movement keys when a threat is present. | Mode behavior follows the configured handover conditions. |
+| Emergency response | Observe a sufficiently small obstacle gap. | Emergency behavior may override manual input. |
+| Camera visualization | Inspect the camera panels. | Multiple viewpoints are displayed. |
+| Flight trails | Move both drones. | Colored trails show their recent paths. |
+
+Results depend on initial positions, obstacle timing, keyboard commands, and the current simulation state. A single successful run does not establish a general collision-avoidance guarantee.
+
+## 18. Project Structure
+
+A suggested GitHub repository structure is:
+
+```text
+two-drone-collision-avoidance/
+├── README.md
+├── 33(1).py
 ├── requirements.txt
-└── README.md
+└── screenshots/
+    ├── simulation-overview.png
+    └── obstacle-avoidance.png
 ```
-## 8. Team Responsibilities
 
-| Member | Simulator / Module | Responsibility |
-|---|---|---|
-| Member 1 | Gym-PyBullet Drones | RL environment, baseline policy, maneuver data generation |
-| Member 2 | MuJoCo | High-fidelity dynamics, disturbance testing, robustness |
-| Member 3 | Gazebo / ROS | Sensor simulation, obstacle worlds, perception integration |
-| Member 4 | ArduPilot SITL | MAVLink telemetry, mission validation, autopilot integration |
+The screenshot names are examples. Include the screenshot files only after creating them.
 
-All members contribute to: Koopman model validation, shared control testing, experiment logging, performance comparison, and final report preparation.
+### Generating `requirements.txt`
+
+After testing the project in the working Python environment, generate a dependency list using:
+
+```powershell
+python -m pip freeze > requirements.txt
+```
+
+Review the resulting file before committing it. A complete environment freeze may include packages unrelated to this project.
+
+If the Python filename changes, update the execution command in this README.
+
+## 19. Limitations
+
+- **Simulation only:** The program is designed for PyBullet simulation and is not configured for direct control of a physical drone.
+- **No trained machine-learning model:** The avoidance logic is mathematical and rule-based.
+- **Simplified obstacle geometry:** Some obstacles are represented using effective radii rather than exact surface-distance calculations.
+- **Horizontal pillar assessment:** The pillar's avoidance gap ignores vertical separation.
+- **Short prediction horizon:** Closest approach is estimated under a constant-relative-velocity assumption over at most two seconds.
+- **No formal safety guarantee:** The system may fail to avoid collisions in difficult scenarios or under abrupt movement changes.
+- **Keyboard limitations:** Hardware key rollover can affect simultaneous key presses.
+- **Parameter sensitivity:** Speeds, acceleration limits, effective radii, and distance thresholds influence behavior.
+- **External controller dependency:** Low-level PID behavior depends on the `gym-pybullet-drones` implementation and its configuration.
+
+The project demonstrates important navigation and control concepts, but it should not be described as a production-ready autonomous navigation system.
+
+## 20. Future Improvements
+
+Potential extensions include:
+
+- Compare the current rule-based method with velocity obstacles, artificial potential fields, or model-predictive control.
+- Implement more accurate distance calculations for boxes and non-spherical objects.
+- Record minimum drone-to-obstacle separation and the number of collisions.
+- Measure avoidance events across repeatable scenarios.
+- Add a dashboard displaying speed, current mode, nearest gap, and avoidance strength.
+- Allow users to configure obstacle layouts and simulation parameters.
+- Add repeatable benchmarks for comparing different avoidance configurations.
+- Investigate a learned policy as a separate experiment with appropriate training and evaluation.
+- Add demonstration GIFs, screenshots, and performance plots to the repository.
+
+These are proposed improvements, not features implemented in the current version.
+
+## 21. Troubleshooting
+
+### `ModuleNotFoundError`
+
+Install the missing dependency using the same Python environment used to run the program:
+
+```powershell
+python -m pip install numpy opencv-python pynput pybullet gym-pybullet-drones
+```
+
+### Wrong Python interpreter in VS Code
+
+1. Open the Command Palette.
+2. Select **Python: Select Interpreter**.
+3. Choose the virtual environment for this project.
+4. Open a new terminal and retry.
+
+### PyBullet or OpenCV windows do not appear
+
+- Run the program in a local graphical desktop session.
+- Check whether the program exited with an error.
+- Read the terminal traceback.
+- Ensure the environment supports graphical windows.
+
+### Keyboard controls are ignored
+
+- Wait for the warm-up period.
+- Confirm that the program is still running.
+- Try pressing fewer keys simultaneously.
+- Check whether the keyboard supports the required simultaneous key combinations.
+
+### The drone moves differently than expected
+
+- Horizontal movement is relative to the drone's yaw.
+- Automatic avoidance may temporarily override manual input.
+- Velocity and acceleration limits affect movement.
+- Obstacle thresholds determine when avoidance becomes active.
+
+### Package installation fails
+
+Check the complete error output and verify compatibility among Python, NumPy, PyBullet, and the installed `gym-pybullet-drones` release. A clean virtual environment can help avoid dependency conflicts.
+
+## 22. Viva Questions and Answers
+
+### 1. What is the main purpose of this project?
+
+The project demonstrates two-drone control with rule-based collision avoidance in a three-dimensional physics simulation.
+
+### 2. Why are two control modes used?
+
+MANUAL mode allows direct keyboard control. AUTO mode temporarily adjusts movement to respond to potential collision threats.
+
+### 3. How does the system predict a possible collision?
+
+It calculates relative position and relative velocity, then estimates the time of closest approach under a constant-relative-velocity assumption.
+
+### 4. What is relative position?
+
+Relative position is the obstacle's position minus the drone's position. It describes the obstacle's location relative to the drone.
+
+### 5. What is relative velocity?
+
+Relative velocity is the obstacle's velocity minus the drone's velocity. It describes their motion relative to each other.
+
+### 6. What does CPA mean?
+
+CPA stands for **Closest Point of Approach**. It estimates the time when the relative distance is smallest within the prediction horizon.
+
+### 7. Why calculate surface gap instead of only centre distance?
+
+Centre distance measures the separation between object centres. Subtracting the configured radii gives an approximate surface-to-surface clearance.
+
+### 8. Why is avoidance strength between zero and one?
+
+It provides a normalized response. The strength is zero outside the configured avoidance distance and increases as the effective gap decreases.
+
+### 9. Why does the program remember the passing side?
+
+Remembering the side helps reduce repeated switching between left and right when small changes occur in the relative geometry.
+
+### 10. How does the system avoid the other drone?
+
+Each drone includes the other drone's position and velocity in its obstacle list and applies the same relative-motion assessment.
+
+### 11. What is the role of PID control?
+
+PID-based control converts the desired target state and current drone state into motor RPM commands.
+
+### 12. Why is velocity smoothing necessary?
+
+It limits sudden changes in commanded velocity, helping produce more gradual movement. Emergency behavior uses a higher configured acceleration limit.
+
+### 13. Is this a machine-learning project?
+
+No. The current implementation uses mathematical equations, geometric calculations, and programmed rules rather than a trained machine-learning model.
+
+### 14. What is the main limitation of CPA prediction?
+
+It assumes constant relative velocity during the prediction horizon. Sudden changes in drone or obstacle motion can make the prediction inaccurate.
+
+### 15. Does the system guarantee collision-free movement?
+
+No. It is an educational simulation with simplified geometry and heuristic avoidance rules. It does not provide a formal collision-free guarantee.
+
+### 16. What is the difference between obstacle avoidance and PID control?
+
+Obstacle avoidance decides the desired movement direction and target. PID-based control translates the target state into motor commands.
+
+### 17. Why are the physics and control frequencies different?
+
+The physics simulation runs at 240 Hz, while the control logic runs at 48 Hz. This allows physics integration to occur more frequently than control updates.
+
+### 18. What are the main future improvements?
+
+Possible improvements include accurate obstacle geometry, collision statistics, repeatable benchmarks, alternative avoidance algorithms, and a real-time monitoring dashboard.
+
+## 23. Conclusion
+
+The Two-Drone Collision Avoidance Simulation combines manual keyboard control, relative-motion analysis, closest-approach prediction, geometric obstacle avoidance, velocity smoothing, PID-based motor control, and 3D physics simulation.
+
+The most important concept is that the system does not only consider **where an obstacle is currently located**. It also considers **how the drone and obstacle are moving relative to one another**.
+
+Using these values, the program estimates a potential closest approach and generates an avoidance response. The target movement is then passed to a PID-based controller, which produces motor RPM commands for the physics simulator.
+
+This project provides a practical foundation for understanding multi-drone coordination, collision-risk estimation, hybrid control systems, and autonomous navigation concepts.
 
 ---
 
-## 9. Current Project Status
+**Project type:** Python / Robotics Simulation / Collision Avoidance
 
-### Completed
-- [x] Base paper selected and analyzed (Tan et al., Neurocomputing 2025)
-- [x] All mathematical formulations extracted (Eq. 1-42)
-- [x] Algorithm 1 documented
-- [x] Shared control authority allocation logic implemented
-- [x] Multi-simulator workflow designed
-- [x] GitHub repository initialized
-- [x] Team research report on Koopman/EDMD prepared
+**Environment:** PyBullet 3D simulation
 
-### In Progress
-- [ ] ArduPilot SITL telemetry bridge (pymavlink)
-- [ ] Koopman EDMD dynamics learning module
-- [ ] Actor-Critic online learning implementation
+**Control approach:** Manual keyboard control + rule-based automatic avoidance
 
-### Planned
-- [ ] Experience replay stack
-- [ ] Gazebo perception integration
-- [ ] Full Human-in-the-Loop joystick testing
-- [ ] Multi-simulator performance comparison (PSI, ASI, ATE, ACE)
+**Low-level control:** PID-based drone controller
 
----
-
-pip install numpy matplotlib pymavlink torch
+**Machine learning:** Not used in the current implementation
