@@ -988,7 +988,7 @@ The avoidance logic is the high-level decision layer, while the PID controller i
 
 
 
-## 23. Conclusion
+## 13. Conclusion
 
 The Two-Drone Collision Avoidance Simulation combines manual keyboard control, relative-motion analysis, closest-point-of-approach prediction, geometric obstacle avoidance, velocity smoothing, PID-based motor control, and 3D physics simulation.
 
