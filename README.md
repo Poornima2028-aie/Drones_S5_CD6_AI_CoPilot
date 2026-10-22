@@ -717,7 +717,7 @@ The formula is:
 
 $$
 \psi_{\mathrm{target,new}} =
-\operatorname{atan2}\left(
+\text{atan2}\left(
 \sin(\psi_{\mathrm{target,old}} + u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t),
 \cos(\psi_{\mathrm{target,old}} + u_{\mathrm{yaw}}\omega_{\mathrm{yaw}}\Delta t)
 \right)
@@ -728,12 +728,10 @@ Where:
 - $\psi_{\mathrm{target,new}}$ is the updated target yaw angle.
 - $\psi_{\mathrm{target,old}}$ is the previous target yaw angle.
 - $u_{\mathrm{yaw}}$ represents the turning input.
-- $\omega_{\mathrm{yaw}}$ is the configured yaw rate, `0.8 rad/s`.
+- $\omega_{\mathrm{yaw}}$ is the configured yaw rate (`0.8 rad/s`).
 - $\Delta t$ is the control time step.
 
-The `atan2` expression wraps the angle into the range $[-\pi,\pi]$, keeping the yaw value within a standard angular interval.
-
-This allows the drone to turn smoothly in the desired direction without its target yaw angle increasing or decreasing indefinitely.
+The `atan2` function wraps the angle into the standard range from $-\pi$ to $\pi$. This prevents the target yaw angle from increasing or decreasing indefinitely as the drone turns.
 
 ### 8.17 Simulation Time Steps
 
