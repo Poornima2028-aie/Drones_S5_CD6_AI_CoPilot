@@ -277,7 +277,7 @@ The program updates the camera tiles and draws colored flight trails. The contro
 
 ## 8. Mathematical Formulas Used
 
-The following formulas describe the mathematical concepts used by the project. Equations are formatted using GitHub-supported Markdown math syntax.
+The following formulas describe the mathematical concepts used by the project.
 
 ### 8.1 Position and Velocity Vectors
 
