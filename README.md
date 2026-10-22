@@ -97,17 +97,7 @@ A Python-based 3D drone simulation featuring two independently controlled drones
 10. [Manual Controls](#10-manual-controls)
 11. [Control Modes and Safety Logic](#11-control-modes-and-safety-logic)
 12. [PID Control and Drone Physics](#12-pid-control-and-drone-physics)
-13. [Camera Display and Trails](#13-camera-display-and-trails)
-14. [Project Configuration](#14-project-configuration)
-15. [Installation](#15-installation)
-16. [How to Run](#16-how-to-run)
-17. [How to Test the Project](#17-how-to-test-the-project)
-18. [Project Structure](#18-project-structure)
-19. [Limitations](#19-limitations)
-20. [Possible Future Improvements](#20-possible-future-improvements)
-21. [Troubleshooting](#21-troubleshooting)
-22. [Viva Questions and Answers](#22-viva-questions-and-answers)
-23. [Conclusion](#23-conclusion)
+13. [Conclusion](#23-conclusion)
 
 ---
 
