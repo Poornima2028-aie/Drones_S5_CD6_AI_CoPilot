@@ -96,7 +96,7 @@ controller.
 13. [Development Versions and Implemented Improvements](#Development-Version-and-Implemente-Improvements)
 14. [Installation Instructions for Packages](#Installation-Instructions-for-Packages)
 15. [Conclusion](#23-conclusion)
-16. References(#References)
+16. [References](#References) 
 
 ---
 
