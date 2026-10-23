@@ -79,10 +79,6 @@ controller.
 
 ---
 
-# Drone Collision Avoidance Simulation
-
-A Python-based 3D drone simulation featuring two independently controlled drones, static and moving obstacles, predicted collision avoidance, PID-based flight control, and real-time camera visualization.
-
 ## Table of Contents
 
 1. [Project Idea](#1-project-idea)
