@@ -1039,7 +1039,7 @@ The current implementation in `34.py` uses simulated LiDAR for obstacle percepti
 
 The CBF safety filter is designed to reduce risky velocity commands and maintain obstacle clearance. However, it does not guarantee collision-free flight under every possible condition. Performance depends on factors such as obstacle detection, tracking accuracy, control response, and the simulation environment.
 
-##14. Installation Instructions for Packages
+## 14. Installation Instructions for Packages
 
 ### 1. Install Python
 
