@@ -94,8 +94,9 @@ controller.
 11. [Control Modes and Safety Logic](#11-control-modes-and-safety-logic)
 12. [PID Control and Drone Physics](#12-pid-control-and-drone-physics)
 13. [Development Versions and Implemented Improvements](#Development-Version-and-Implemente-Improvements)
-14. [Installation Instructions for Packages](Installation-Instructions-for-Packages)
+14. [Installation Instructions for Packages](#Installation-Instructions-for-Packages)
 15. [Conclusion](#23-conclusion)
+16. References(#References)
 
 ---
 
@@ -1102,4 +1103,23 @@ Using their relative positions and velocities, the program estimates a potential
 This project provides a practical foundation for understanding multi-drone interaction, collision-risk estimation, hybrid control systems, and autonomous navigation concepts.
 
 The implementation uses mathematical and rule-based obstacle avoidance rather than a trained machine-learning model. It is intended for learning and demonstration and does not guarantee collision-free movement.
+
+## 16. References
+
+1. Tan, J., Xue, S., Guo, Z., Li, H., Cao, H., and Chen, B., 
+   "Data-driven optimal shared control of unmanned aerial vehicles," 
+   *Neurocomputing*, vol. 622, article 129428, 2025.
+   DOI: https://doi.org/10.1016/j.neucom.2025.129428
+
+2. Panerati, J., Zheng, H., Zhou, S., Xu, J., Prorok, A., and Schoellig, A. P., 
+   "Learning to Fly—A Gym Environment with PyBullet Physics for 
+   Reinforcement Learning of Multi-agent Quadcopter Control," 
+   in *Proceedings of the 2021 IEEE/RSJ International Conference 
+   on Intelligent Robots and Systems (IROS)*, pp. 7512–7519, 2021.
+   DOI: https://doi.org/10.1109/IROS51168.2021.9635857
+
+3. Jocher, G., and Qiu, J., 
+   "Ultralytics YOLO11," Ultralytics, version 11.0.0, 2024.
+   GitHub: https://github.com/ultralytics/ultralytics
+   Documentation: https://docs.ultralytics.com/models/yolo11/
 
