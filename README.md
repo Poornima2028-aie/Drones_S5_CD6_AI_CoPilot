@@ -98,7 +98,8 @@ A Python-based 3D drone simulation featuring two independently controlled drones
 11. [Control Modes and Safety Logic](#11-control-modes-and-safety-logic)
 12. [PID Control and Drone Physics](#12-pid-control-and-drone-physics)
 13. [Development Versions and Implemented Improvements](#Development-Version-and-Implemente-Improvements)
-14. [Conclusion](#23-conclusion)
+14. [Installation Instructions for Packages](Installation-Instructions-for-Packages)
+15. [Conclusion](#23-conclusion)
 
 ---
 
@@ -1038,8 +1039,63 @@ The current implementation in `34.py` uses simulated LiDAR for obstacle percepti
 
 The CBF safety filter is designed to reduce risky velocity commands and maintain obstacle clearance. However, it does not guarantee collision-free flight under every possible condition. Performance depends on factors such as obstacle detection, tracking accuracy, control response, and the simulation environment.
 
+##14. Installation Instructions for Packages
 
-## 14. Conclusion
+### 1. Install Python
+
+Install Python 3.10 or 3.11 and ensure Python is added to your system PATH.
+
+Download: https://www.python.org/downloads/
+
+### 2. Create a Virtual Environment (Recommended)
+
+```bash
+python -m venv venv
+```
+
+Activate it on Windows:
+
+**Command Prompt (CMD):**
+```cmd
+venv\Scripts\activate.bat
+```
+
+**PowerShell:**
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+### 3. Install Required Packages
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install numpy opencv-python gymnasium pybullet
+```
+
+Install the `gym-pybullet-drones` package from its source directory, if it is not already installed:
+
+```bash
+python -m pip install -e .
+```
+
+Run this command from the directory containing the package's `pyproject.toml` or `setup.py`.
+
+### 4. Optional Package for YOLO Object Detection
+
+If YOLO detection is used in the project, install:
+
+```bash
+python -m pip install ultralytics
+```
+
+### 5. Verify the Installation
+
+```bash
+python -c "import numpy, cv2, gymnasium, pybullet; print('All core packages installed successfully!')"
+```
+
+
+## 15. Conclusion
 
 The Two-Drone Collision Avoidance Simulation combines manual keyboard control, relative-motion analysis, closest-point-of-approach prediction, geometric obstacle avoidance, velocity smoothing, PID-based motor control, and 3D physics simulation.
 
