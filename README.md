@@ -759,12 +759,11 @@ $$
 
 Where:
 
-- `K_P` is the proportional gain.
-  - $K_P$ is the proportional gain.
-- `K_I` is the integral gain.
-- `K_D` is the derivative gain.
-- `e(t)` is the control error.
-- `u(t)` is the controller output.
+- $K_P$ is the proportional gain.
+- $K_I$ is the integral gain.
+- $K_D$ is the derivative gain.
+- $e(t)$ is the control error.
+- $u(t)$ is the controller output.
 
 The project uses `DSLPIDControl` from `gym-pybullet-drones`. The library handles the actual controller calculations and motor mapping. The equation above explains the general PID principle rather than the exact implementation details of the library.
 
