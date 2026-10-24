@@ -760,6 +760,7 @@ $$
 Where:
 
 - `K_P` is the proportional gain.
+  - $K_P$ is the proportional gain.
 - `K_I` is the integral gain.
 - `K_D` is the derivative gain.
 - `e(t)` is the control error.
