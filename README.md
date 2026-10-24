@@ -1012,7 +1012,7 @@ This version focuses on testing and improving obstacle-avoidance logic using a s
 This version introduces autonomous waypoint navigation. Instead of relying entirely on pilot input, both drones follow predefined routes while adjusting their movement to avoid environmental obstacles and each other.
 
 <p align="center">
-  <img src="ffig.png.jpeg" alt="Image 3" width="580"/>
+  <img src="fig.png.jpeg" alt="Image 3" width="580"/>
 </p>
 
 ### 3. `34.py` — LiDAR-Based Obstacle Detection with CBF Safety Filtering and Flight Reports
