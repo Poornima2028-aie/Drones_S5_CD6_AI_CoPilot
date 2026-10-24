@@ -989,6 +989,13 @@ This project was developed through multiple versions, with each version introduc
 
 This version focuses on testing and improving obstacle-avoidance logic using a single manually controlled drone. It provides a simpler environment for evaluating collision prediction, smooth movement, and transitions between manual and automatic control.
 
+<p align="center">
+  <img src="automated.png.jpeg" alt="Image 1" width="580"/>
+</p>
+<p align="center">
+  <img src="manual.png.jpeg" alt="Image 2" width="580"/>
+</p>
+
 ### 2. `multi_drone_automated.py` — Autonomous Two-Drone Waypoint Navigation
 
 **Main Implementation:**
